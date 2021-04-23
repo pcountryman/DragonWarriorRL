@@ -2,19 +2,14 @@
 import pandas as pd
 import os
 from datetime import date
-from CalcVIF import calc_vif
-# from LatLongConversion import latlong
 from BayesOptimizeGlobal import bayesoptimizemodel
 from HouseCleanup import houseclean
 from GlobalCV import knncv
-import matplotlib.pyplot as plt
 import numpy as np
 from AlchemyConnect import alchemyconnect
 from sqlalchemy import create_engine
 from NeighborhoodElasticNet import neighborhood_elastic_net
 from sqlalchemy.types import VARCHAR
-from sklearn.metrics import mean_squared_error
-import folium
 
 # Make a new folder with today's date to store all outputs
 today = str(date.today())
@@ -76,8 +71,7 @@ months
 p = 0
 for val_month in pd.date_range(start=date_start, end=date_end, freq='m'):
     p += 1  # todo change this to year & month from val_month
-    date_list = []  # todo should this be inside for loop?
-    date_list.append(val_month.strftime('%Y-%m-%d'))
+    date_list = [val_month.strftime('%Y-%m-%d')]  # todo should this be inside for loop?
     '''
     setup X month window for time analysis, to predict prices for val_month.
     date_cutoff is the last month used to train the model
@@ -120,7 +114,6 @@ for val_month in pd.date_range(start=date_start, end=date_end, freq='m'):
     cleansold, cleanunsold, house_master_id = houseclean(
         house, date_cutoff, early_date_cutoff, today, keeplist)
 
-
     # todo instead of dropping, consider adjust GarageSqft to 0
     cleansoldcutoff = cleansold.fillna(
         value={'GarageSqft': 0}).dropna(axis=0)
@@ -141,8 +134,8 @@ for val_month in pd.date_range(start=date_start, end=date_end, freq='m'):
                             'GarageSqft', 'Adj_sale_amount', 'muni_code']]
     sold_clean_valmonth = cleansold_valmonth[['latitude', 'longitude', 'years_ago_built', 'num_beds',
                                               'num_baths',
-                            'sqft', 'acres',
-                            'GarageSqft', 'Adj_sale_amount', 'muni_code']]
+                                              'sqft', 'acres',
+                                              'GarageSqft', 'Adj_sale_amount', 'muni_code']]
 
     # VIF on standardized data removing unhelpful input parameters
 
@@ -235,7 +228,7 @@ for val_month in pd.date_range(start=date_start, end=date_end, freq='m'):
     if neighborhood == 'yes':
         neigh_id, neigh_price, neigh_sqft, neigh_predict, neigh_coefs, neigh_intercepts = \
             neighborhood_elastic_net(
-            sold_clean, sold_clean['Adj_sale_amount'],
+                sold_clean, sold_clean['Adj_sale_amount'],
                 sold_clean_valmonth, sold_clean_valmonth['Adj_sale_amount'],
                 number_of_comps_neighborhood, today)
         all_neighborhood_index_list = all_neighborhood_index_list + neigh_predict.index.tolist()
@@ -266,8 +259,8 @@ all_predicted_price['val_date'] = val_date_list
 all_predicted_price['model'] = 'knn'
 all_predicted_price = all_predicted_price.set_index(['int_id', 'val_date'])
 all_predicted_price['Adj_sale_amount'] = all_homes['Adj_sale_amount']
-all_predicted_price['compare'] = ((
-    all_predicted_price['Adj_sale_amount'] - all_predicted_price['price_estimate'])
+all_predicted_price['compare'] = ((all_predicted_price['Adj_sale_amount'] -
+                                   all_predicted_price['price_estimate'])
                                   / all_predicted_price['Adj_sale_amount'] * 100)
 all_predicted_price['knn_accurate'] = np.where(abs(all_predicted_price['compare']) <= 10, 1, 0)
 all_predicted_price['sale_date'] = all_homes['sale_date']
@@ -308,7 +301,7 @@ if neighborhood == 'yes':
         'mysql+pymysql://preston:tRT8Rq2X23xe@ec2-54-205-186-164.compute-1.amazonaws.com:3306/Julius'
     )
     all_neighborhood_prices.to_sql(f'neighborhood_{fips_code}', con=engine, index_label=['int_id', 'val_date'],
-                                   if_exists='replace', dtype={'val_date':VARCHAR(length=30)})
+                                   if_exists='replace', dtype={'val_date': VARCHAR(length=30)})
 
     all_neighborhood_prices.to_csv(f'{today}/allneighborhoodpricestest.csv')
     '''
@@ -335,7 +328,7 @@ engine = create_engine(
     'mysql+pymysql://preston:tRT8Rq2X23xe@ec2-54-205-186-164.compute-1.amazonaws.com:3306/Julius'
 )
 all_predicted_price.to_sql(f'knnpredict_{fips_code}', con=engine, index_label=['int_id', 'val_date'],
-                                   if_exists='replace', dtype={'val_date':VARCHAR(length=30)})
+                           if_exists='replace', dtype={'val_date': VARCHAR(length=30)})
 all_predicted_price.to_csv(f'{today}/AllPredictedPrice.csv')
 val_month_all.to_csv(f'{today}/valmonthalltest.csv')
 
