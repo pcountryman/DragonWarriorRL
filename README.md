@@ -10,7 +10,7 @@ The **Q learning model** (agent) interacts with an environment (Python scripted 
 - **Adam optimization** of neural network. Stochastic gradient descent method based on adaptive estimation of first-order and second-order moments.
 
 ## Challenges
-1. The game has to sub-environments: the map, and combat. 
+1. The game has two sub-environments: the map, and combat. 
   - Combat has four options: fight, item, magic, run. Item and Magic both have sub-menu options (complicated), while fight automatically attacks the only target available (simple) and run flees (simple).
   - Map navigation brings up a sub-menu of 8 choices whenever the A button is pressed (Search, Talk, Stairs, Item, Magic, etc).
 
