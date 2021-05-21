@@ -3,6 +3,7 @@ from nes_py import NESEnv
 import numpy as np
 import pandas as pd
 
+
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
 game_path = 'dragon_warrior.nes'

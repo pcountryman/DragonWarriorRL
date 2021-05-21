@@ -1,4 +1,5 @@
 # setup actions for a very simple environment
+
 basic_actions = [
     ['NOOP'],
     ['right'],

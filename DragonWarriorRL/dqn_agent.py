@@ -5,6 +5,7 @@ from collections import deque
 import tensorflow as tf
 from matplotlib import pyplot as plt
 
+
 # todo migrate to Tensorflow 2.0
 
 class DQNAgent:

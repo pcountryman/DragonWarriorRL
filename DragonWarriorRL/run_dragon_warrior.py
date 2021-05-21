@@ -4,6 +4,7 @@ from nes_py.wrappers import JoypadSpace
 from dqn_agent import DQNAgent
 import time
 
+
 # todo add DQN agent!
 
 env = DragonWarriorEnv()
