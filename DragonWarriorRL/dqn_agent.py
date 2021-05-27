@@ -1,5 +1,7 @@
 import time
 import random
+
+import keras.models
 import numpy as np
 from collections import deque
 import tensorflow as tf
@@ -15,6 +17,8 @@ class DQNAgent:
         self.session = tf.compat.v1.Session()
         self.build_model()
         self.saver = tf.compat.v1.train.Saver(max_to_keep=10)
+        self.saver.restore(self.session, './models/model')
+        print('Model restored')
         self.session.run(tf.compat.v1.global_variables_initializer())
         self.saver = tf.compat.v1.train.Saver()
         self.memory = deque(maxlen=max_memory)
@@ -23,12 +27,12 @@ class DQNAgent:
         self.eps_min = 0.1
         self.gamma = 0.90
         self.batch_size = 32
-        self.burnin = 100000
+        self.burnin = 100000000
         self.copy = 10000
         self.step = 0
         self.learn_each = 3
         self.learn_step = 0
-        self.save_each = 50000000
+        self.save_each = 40000
         self.double_q = double_q
 
     def build_model(self):
@@ -48,6 +52,7 @@ class DQNAgent:
             self.conv_3 = tf.compat.v1.layers.conv2d(inputs=self.conv_2, filters=64, kernel_size=3, strides=1,
                                            activation=tf.nn.relu)
             self.flatten = tf.compat.v1.layers.flatten(inputs=self.conv_3)
+            # todo add in map_id, map_position, magic_keys, hero stats, gold, HP
             self.dense = tf.compat.v1.layers.dense(inputs=self.flatten, units=512, activation=tf.nn.relu)
             self.output = tf.compat.v1.layers.dense(inputs=self.dense, units=self.actions, name='output')
         # Target network
@@ -59,6 +64,7 @@ class DQNAgent:
             self.conv_3_target = tf.compat.v1.layers.conv2d(inputs=self.conv_2_target, filters=64, kernel_size=3, strides=1,
                                                   activation=tf.nn.relu)
             self.flatten_target = tf.compat.v1.layers.flatten(inputs=self.conv_3_target)
+            # todo add in map_id, map_position, magic_keys, hero stats, gold, HP
             self.dense_target = tf.compat.v1.layers.dense(inputs=self.flatten_target, units=512, activation=tf.nn.relu)
             self.output_target = tf.stop_gradient(
                 tf.compat.v1.layers.dense(inputs=self.dense_target, units=self.actions, name='output_target'))
@@ -83,7 +89,9 @@ class DQNAgent:
 
     def save_model(self):
         """ Saves current model to disk """
-        self.saver.save(sess=self.session, save_path='./models/model', global_step=self.step)
+        # self.saver.save(sess=self.session, save_path='./models/model', global_step=self.step)
+        self.saver.save(sess=self.session, save_path='./models/model')
+
 
     def add(self, experience):
         """ Add observation to experience """

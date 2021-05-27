@@ -26,5 +26,5 @@ dragon_warrior_actions = [
     ['down'],
     ['A'],
     ['B'],
-    ['start'],
+    # ['start'],
 ]

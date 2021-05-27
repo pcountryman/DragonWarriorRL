@@ -1,12 +1,10 @@
 import os
 from nes_py import NESEnv
 import numpy as np
-import pandas as pd
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
 
 game_path = 'dragon_warrior.nes'
-
 
 class DragonWarriorEnv(NESEnv):
     '''An OpenAI Gym interface to the NES game Final Fantasy'''
@@ -15,7 +13,7 @@ class DragonWarriorEnv(NESEnv):
     reward_range = (-15, 15)
 
     def __init__(self):
-        '''Initialize a new Final Fantasy environment'''
+        '''Initialize a new Dragon Warrior environment'''
         super(DragonWarriorEnv, self).__init__(game_path)
         # setup any variables to use in the below callbacks here
 
@@ -32,10 +30,56 @@ class DragonWarriorEnv(NESEnv):
         self._throne_key_chest_y_pos = 1
         self._throne_room_door_x_pos = 4
         self._throne_room_door_y_pos = 6
+        self._hero_gold = 0
+        self._herb_count = 0
+        self._hero_torches = 0
+        self.reset()
+        self._start_menu = False
+        self._skip_start_screen()
+
+    def _skip_start_screen(self):
+        '''Press and release start to skip the start screen'''
+        while self._start_menu == False:
+            self._frame_advance(8)
+            self._frame_advance(0)
+            self._is_start_menu()
+
+    def _is_start_menu(self):
+        '''Return a boolean value for start menu screen based on ram value'''
+        if self.ram[0x000b] == 63:
+            if self.ram[0x000c] == 115:
+                if self.ram[0x000d] == 154:
+                    self._start_menu = True
+        else:
+            pass
+
+    def _is_busy(self):
+        '''Return a boolean value if an action is being processed'''
+        # any button can yield busy state, value of 0 indicates no action is being processed
+        if self.ram[0x0047] != 0:
+            return True
+        else:
+            return False
 
     def _current_exp(self):
         '''Return the current experience value'''
-        return self.ram[0x00BA]
+        return self.ram[0x00BA] + 256*self.ram[0x00BB]
+
+    def _current_gold(self):
+        '''Return the current gold value'''
+        return self.ram[0x00BC] + 256*self.ram[0x00BD]
+
+    def _current_magic_keys(self):
+        '''Return the current number of magic keys'''
+        return self.ram[0x00BF]
+
+    def _current_magic_herbs(self):
+        '''Return the current number of magic herbs'''
+        return self.ram[0x00C0]
+
+    def _current_torches(self):
+        '''Return the current number of torches'''
+        return self.ram[0x00C1]
 
     def _current_hp(self):
         '''Return the current hit point value'''
@@ -84,10 +128,6 @@ class DragonWarriorEnv(NESEnv):
         '''Return the current map id'''
         return self.ram[0x0045]
 
-    def _current_magic_keys(self):
-        '''Return the current number of magic keys'''
-        return self.ram[0x00BF]
-
     def _will_reset(self):
         '''Handle any RAM hacking before a reset occurs'''
         # use this method to perform setup before an episode resets.
@@ -102,6 +142,11 @@ class DragonWarriorEnv(NESEnv):
         # the method returns None
         # todo add in method that automatically selects continue at title screen
         # todo add in method that stores initial x and y pos on worldmap
+        self._magic_keys = 0
+        self._hero_gold = 0
+        self._herb_count = 0
+        self._start_menu = False
+        self._skip_start_screen()
         pass
 
     def _did_step(self, done):
@@ -125,30 +170,79 @@ class DragonWarriorEnv(NESEnv):
         else:
             return False
 
+    @property
+    def _leave_throne_room(self):
+        '''Return a boolean determining if the bot exited the throne room'''
+        # Tantagel Castle is 4 on map id
+        return self._map_id() == 4
+
+    @property
+    def _get_throne_room_torch(self):
+        '''Return a boolean determining if the bot got the torch in the throne room'''
+        return self._current_torches() == 1
+
+    @property
+    def _get_throne_room_gold(self):
+        '''Return a boolean determining if the bot got the gold in the throne room'''
+        return self._current_gold() > 0
+
+    @property
+    def _get_throne_room_key(self):
+        '''Return a boolean determining if the bot got the key in the throne room'''
+        return self._magic_keys > 0
+
     def _death_penalty(self):
         '''Return the reward for dying'''
         if self._is_dead:
-            return -25
-        return 0
+            _reward = -25
+        else:
+            _reward = 0
+        return _reward
 
     def _exp_reward(self):
         # return the reward based on party experience gained
-        _reward = self._current_exp() - self._hero_exp
+        _reward = (self._current_exp() - self._hero_exp) / (self._hero_exp + 0.0001) * 100
 
         # do not reward paltry experience gains of 2% or less of hero exp
-        if (_reward / (self._hero_exp + 0.00001)) < 0.02:
-            return 0
+        if (_reward / (self._hero_exp + 0.00001)) < 2:
+            _reward = 0
 
         # determine new hero exp value from previous exp values
         self._hero_exp = self._current_exp()
 
         return _reward
 
+    def _gold_reward(self):
+        '''Return the reward based on gold acquired'''
+        _reward = (self._current_gold() - self._hero_gold) / (self._hero_gold + 0.0001) * 100
+        self._hero_gold = self._current_gold()
+        return _reward
+
+    # todo refine this for HP recovery once battle are possible
+    def _herb_reward(self):
+        '''Return the reward for gaining herbs'''
+        if self._current_magic_herbs() > self._herb_count:
+            _reward = 15
+        else:
+            _reward = 0
+        self._herb_count = self._current_magic_herbs()
+        return _reward
+
+    # todo refine this for dungeon use
+    def _torch_reward(self):
+        '''Return the reward for gaining torches'''
+        if self._current_torches() > self._hero_torches:
+            _reward = 5
+        else:
+            _reward = 0
+        self._hero_torches = self._current_torches()
+        return _reward
+
     def _open_door_reward(self):
         '''Return the reward for opening a door using a magic key.
         The only way to get rid of a key is to use it.'''
         if self._current_magic_keys() < self._magic_keys:
-            _reward = 5
+            _reward = 15
         else:
             _reward = 0
         # Update key value
@@ -158,40 +252,63 @@ class DragonWarriorEnv(NESEnv):
     def _gain_magic_key_reward(self):
         '''Return the reward for acquiring a magic key'''
         if self._current_magic_keys() > self._magic_keys:
-            _reward = 5
+            _reward = 15
         else:
             _reward = 0
         # Update key value
         self._magic_keys = self._current_magic_keys()
         return _reward
 
+    # not used,
     def _throne_room_key_reward(self):
         if self._magic_keys == 0:
-            if np.sqrt((self._current_map_y_pos() - self._throne_key_chest_y_pos) ** 2 +
-                       (self._current_map_x_pos() - self._throne_key_chest_x_pos) ** 2) > 0:
-                _reward = -1
+            key_chest_penalty = np.sqrt((self._current_map_y_pos() - self._throne_key_chest_y_pos) ** 2 +
+                       (self._current_map_x_pos() - self._throne_key_chest_x_pos) ** 2)
+            if key_chest_penalty > 0:
+                _reward = -0.001
             else:
-                _reward = 0
+                _reward = 1
         else:
-            if np.sqrt((self._current_map_y_pos() - self._throne_room_door_y_pos) ** 2 +
-                       (self._current_map_x_pos() - self._throne_room_door_x_pos) ** 2) > 0:
-                _reward = -1
+            door_open_penalty = np.sqrt((self._current_map_y_pos() - self._throne_room_door_y_pos) ** 2 +
+                       (self._current_map_x_pos() - self._throne_room_door_x_pos) ** 2)
+            if door_open_penalty > 0:
+                _reward = -0.001
             else:
-                _reward = 0
+                _reward = 1
         return _reward
+
+    # use this method to assure each action is resolved on nes-py
+    def _frame_buffering(self):
+        # A button input lag
+        while self._is_busy():
+            self.frame_advance(0)
+        # for i in range(2):
+        #     self._frame_advance(0)
+
+    def frame_advance(self, action):
+        '''Return the frame advance function'''
+        return self._frame_advance(action)
 
     def _get_reward(self):
         '''Return the reward after a step occurs'''
+        self._frame_buffering()
         return (self._exp_reward() + self._open_door_reward() + self._gain_magic_key_reward() +
-                self._throne_room_key_reward())
+                self._herb_reward() + self._gold_reward() +
+                self._torch_reward() - 0.1)
 
     def _get_done(self):
         '''Return True if the episode is over, False otherwise'''
         return False
 
+    # include RAM info needed for agent (map_id, hero_stats, map_position, etc)
     def _get_info(self):
         '''Return the info after a step occurs'''
-        return {}
+        return dict(
+            exit_throne_room = self._leave_throne_room,
+            throne_room_gold = self._get_throne_room_gold,
+            throne_room_torch = self._get_throne_room_torch,
+            throne_room_key = self._get_throne_room_key
+        )
 
 
 # explicitly define the outward facing API for the module
