@@ -46,10 +46,14 @@ color channels. The agent can take 256 different possible actions.'''
 states = (240, 256, 3)
 actions = env.action_space.n
 
-agent = DQNAgent(states=states, actions=actions, max_memory=1000000, double_q=True)
+dw_info_dict = env.state_info
+dw_info_states = np.array(list(dw_info_dict.values()))
+
+agent = DQNAgent(states=states, game_states=dw_info_states, actions=actions, max_memory=1000000,
+                 double_q=True)
 
 # Episodes
-episodes = 40
+episodes = 5
 rewards = []
 
 # Timing
@@ -59,18 +63,21 @@ step = 0
 # Main loop
 for e in range(episodes):
 
-    # Reset env
+    # Reset env, returns screen values
     state = env.reset()
+    # Return values for RAM info
+    info_state = env.state_info
+    dw_game_states = np.array(list(info_state.values()))
 
     # Reward
     total_reward = 0
     iter = 0
 
     # Play
-    for _ in range(40100):
+    for _ in range(40001):
 
         # Show env (diabled), slows down learning by a factor of 3
-        # env.render()
+        env.render()
 
         # Run agent
         action = agent.run(state=state)
@@ -90,7 +97,7 @@ for e in range(episodes):
 
         # Total reward
         total_reward += reward
-        # print(total_reward, dragon_warrior_actions[action], iter)
+        print(total_reward, dragon_warrior_actions[action], iter)
         # input('press any key to advance')
 
         # Update state

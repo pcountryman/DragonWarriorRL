@@ -61,6 +61,7 @@ class DragonWarriorEnv(NESEnv):
         else:
             return False
 
+    # todo set current values as init methods, ensure reseting can't be used to game stat growth etc
     def _current_exp(self):
         '''Return the current experience value'''
         return self.ram[0x00BA] + 256*self.ram[0x00BB]
@@ -127,6 +128,25 @@ class DragonWarriorEnv(NESEnv):
     def _map_id(self):
         '''Return the current map id'''
         return self.ram[0x0045]
+
+    @property
+    def state_info(self):
+        '''Return a dictionary with key value pairs for information for agent'''
+        return dict(
+            map_id = self._map_id(),
+            enemy_terrain_pointer = self._current_enemy_terrain_pointer(),
+            is_enemy = 1 if self._is_enemy() else 0,
+            map_x_pos = self._current_map_x_pos(),
+            map_y_pos = self._current_map_y_pos(),
+            current_hp = 0 if self._start_menu else self._current_hp(),
+            current_atk = self._current_atk_power(),
+            current_def = self._current_def_power(),
+            current_magic_keys = self._current_magic_keys(),
+            current_gold = self._current_gold(),
+            current_exp = self._current_exp(),
+            current_magic_herbs = self._current_magic_herbs(),
+            current_torches = self._current_torches(),
+        )
 
     def _will_reset(self):
         '''Handle any RAM hacking before a reset occurs'''

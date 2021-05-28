@@ -11,19 +11,20 @@ from matplotlib import pyplot as plt
 
 class DQNAgent:
     '''DQN agent'''
-    def __init__(self, states, actions, max_memory, double_q):
+    def __init__(self, states, game_states, actions, max_memory, double_q):
         self.states = states
+        self.game_states = game_states.shape
         self.actions = actions
         self.session = tf.compat.v1.Session()
         self.build_model()
         self.saver = tf.compat.v1.train.Saver(max_to_keep=10)
-        self.saver.restore(self.session, './models/model')
-        print('Model restored')
         self.session.run(tf.compat.v1.global_variables_initializer())
-        self.saver = tf.compat.v1.train.Saver()
         self.memory = deque(maxlen=max_memory)
         self.eps = 1
+        # todo automate eps storage in saved info
+        # todo eps_decay needs to be reward based with waviness
         self.eps_decay = 0.99999975
+        # self.eps_decay = 0.99995
         self.eps_min = 0.1
         self.gamma = 0.90
         self.batch_size = 32
@@ -43,6 +44,11 @@ class DQNAgent:
         self.a_true = tf.compat.v1.placeholder(dtype=tf.int32, shape=[None], name='actions')
         self.reward = tf.compat.v1.placeholder(dtype=tf.float32, shape=[], name='reward')
         self.input_float = tf.cast(self.input, dtype=tf.float32) / 255.
+        # Preston accounts for Dragon Warrior RAM info
+        self.game_input = tf.compat.v1.placeholder(dtype=tf.float32, shape=(None, ) + self.game_states,
+                                                   name = 'game_input')
+        # print(self.input, self.game_input)
+        # input('pause for test')
         # Online network
         with tf.compat.v1.variable_scope('online'):
             self.conv_1 = tf.compat.v1.layers.conv2d(inputs=self.input_float, filters=32, kernel_size=8, strides=4,
@@ -52,7 +58,8 @@ class DQNAgent:
             self.conv_3 = tf.compat.v1.layers.conv2d(inputs=self.conv_2, filters=64, kernel_size=3, strides=1,
                                            activation=tf.nn.relu)
             self.flatten = tf.compat.v1.layers.flatten(inputs=self.conv_3)
-            # todo add in map_id, map_position, magic_keys, hero stats, gold, HP
+            # Preston combines game pixel info with RAM info
+            self.total_states = tf.concat((self.flatten, self.game_input), axis=1)
             self.dense = tf.compat.v1.layers.dense(inputs=self.flatten, units=512, activation=tf.nn.relu)
             self.output = tf.compat.v1.layers.dense(inputs=self.dense, units=self.actions, name='output')
         # Target network
@@ -64,7 +71,8 @@ class DQNAgent:
             self.conv_3_target = tf.compat.v1.layers.conv2d(inputs=self.conv_2_target, filters=64, kernel_size=3, strides=1,
                                                   activation=tf.nn.relu)
             self.flatten_target = tf.compat.v1.layers.flatten(inputs=self.conv_3_target)
-            # todo add in map_id, map_position, magic_keys, hero stats, gold, HP
+            # Preston combines game pixel info with RAM info
+            self.total_states = tf.concat((self.flatten, self.game_input), axis=1)
             self.dense_target = tf.compat.v1.layers.dense(inputs=self.flatten_target, units=512, activation=tf.nn.relu)
             self.output_target = tf.stop_gradient(
                 tf.compat.v1.layers.dense(inputs=self.dense_target, units=self.actions, name='output_target'))
@@ -82,11 +90,20 @@ class DQNAgent:
         ])
         self.writer = tf.compat.v1.summary.FileWriter(logdir='./logs', graph=self.session.graph)
 
+    # todo grab weights from previous model somehow
+    def restore_model(self):
+        ''' Update weights with previous model weights'''
+        self.saver = tf.compat.v1.train.import_meta_graph('./models/model.meta')
+        self.saver.restore(self.session, tf.compat.v1.train.latest_checkpoint('./models/'))
+        print(self.session.run('reward:'))
+
     def copy_model(self):
         """ Copy weights to target network """
         self.session.run([tf.compat.v1.assign(new, old) for (new, old) in
-                          zip(tf.compat.v1.trainable_variables('target'), tf.compat.v1.trainable_variables('online'))])
+                          zip(tf.compat.v1.trainable_variables('target'),
+                              tf.compat.v1.trainable_variables('online'))])
 
+    # todo verify if save model saves eps value
     def save_model(self):
         """ Saves current model to disk """
         # self.saver.save(sess=self.session, save_path='./models/model', global_step=self.step)
@@ -99,6 +116,7 @@ class DQNAgent:
 
     def predict(self, model, state):
         """ Prediction """
+        # todo make sure model pulls all state info for feed_dict
         if model == 'online':
             return self.session.run(fetches=self.output, feed_dict={self.input: np.array(state)})
         if model == 'target':
