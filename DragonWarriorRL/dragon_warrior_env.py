@@ -3,8 +3,8 @@ from nes_py import NESEnv
 import numpy as np
 
 package_directory = os.path.dirname(os.path.abspath(__file__))
-
-game_path = 'dragon_warrior.nes'
+game_name = 'dragon_warrior.nes'
+game_path = os.path.join(package_directory, game_name)
 
 class DragonWarriorEnv(NESEnv):
     '''An OpenAI Gym interface to the NES game Final Fantasy'''
@@ -25,6 +25,10 @@ class DragonWarriorEnv(NESEnv):
         self._current_map = 5
         self._map_x_pos_last = 3
         self._map_y_pos_last = 4
+        # hero position on current map
+        self._hero_map = 0
+        self._hero_x_pos = 0
+        self._hero_y_pos = 0
         # variable to train network at beginning
         self._throne_key_chest_x_pos = 6
         self._throne_key_chest_y_pos = 1
@@ -279,6 +283,28 @@ class DragonWarriorEnv(NESEnv):
         self._magic_keys = self._current_magic_keys()
         return _reward
 
+    # first attempt to encourage exploration
+    def _is_same_pos(self):
+        '''Return boolean operator if hero has not moved'''
+        if self._hero_x_pos == self._current_map_x_pos():
+            if self._hero_y_pos == self._current_map_y_pos():
+                if self._hero_map == self._map_id():
+                    return True
+        else:
+            return False
+
+    # stationary penalty
+    def _stationary_penalty(self):
+        if self._is_same_pos():
+            _reward = -0.1
+        else:
+            _reward = 0
+        self._hero_x_pos = self._current_map_x_pos()
+        self._hero_y_pos = self._current_map_y_pos()
+        self._hero_map = self._map_id()
+        return _reward
+
+
     # not used,
     def _throne_room_key_reward(self):
         if self._magic_keys == 0:
@@ -314,7 +340,7 @@ class DragonWarriorEnv(NESEnv):
         self._frame_buffering()
         return (self._exp_reward() + self._open_door_reward() + self._gain_magic_key_reward() +
                 self._herb_reward() + self._gold_reward() +
-                self._torch_reward() - 0.1)
+                self._torch_reward() + self._stationary_penalty())
 
     def _get_done(self):
         '''Return True if the episode is over, False otherwise'''

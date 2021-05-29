@@ -33,7 +33,7 @@ class DQNAgent:
         self.step = 0
         self.learn_each = 3
         self.learn_step = 0
-        self.save_each = 40000
+        self.save_each = 10000
         self.double_q = double_q
 
     def build_model(self):
@@ -60,7 +60,7 @@ class DQNAgent:
             self.flatten = tf.compat.v1.layers.flatten(inputs=self.conv_3)
             # Preston combines game pixel info with RAM info
             self.total_states = tf.concat((self.flatten, self.game_input), axis=1)
-            self.dense = tf.compat.v1.layers.dense(inputs=self.flatten, units=512, activation=tf.nn.relu)
+            self.dense = tf.compat.v1.layers.dense(inputs=self.total_states, units=512, activation=tf.nn.relu)
             self.output = tf.compat.v1.layers.dense(inputs=self.dense, units=self.actions, name='output')
         # Target network
         with tf.compat.v1.variable_scope('target'):
@@ -72,8 +72,9 @@ class DQNAgent:
                                                   activation=tf.nn.relu)
             self.flatten_target = tf.compat.v1.layers.flatten(inputs=self.conv_3_target)
             # Preston combines game pixel info with RAM info
-            self.total_states = tf.concat((self.flatten, self.game_input), axis=1)
-            self.dense_target = tf.compat.v1.layers.dense(inputs=self.flatten_target, units=512, activation=tf.nn.relu)
+            self.total_states_target = tf.concat((self.flatten, self.game_input), axis=1)
+            self.dense_target = tf.compat.v1.layers.dense(inputs=self.total_states_target, units=512,
+                                                          activation=tf.nn.relu)
             self.output_target = tf.stop_gradient(
                 tf.compat.v1.layers.dense(inputs=self.dense_target, units=self.actions, name='output_target'))
         # Optimizer
@@ -114,22 +115,25 @@ class DQNAgent:
         """ Add observation to experience """
         self.memory.append(experience)
 
-    def predict(self, model, state):
+    def predict(self, model, state, game_state):
+        state_dict = {self.input: np.array(state)}
+        game_state_dict = {self.game_input : np.array(game_state)}
+        state_dict.update(game_state_dict)
         """ Prediction """
         # todo make sure model pulls all state info for feed_dict
         if model == 'online':
-            return self.session.run(fetches=self.output, feed_dict={self.input: np.array(state)})
+            return self.session.run(fetches=self.output, feed_dict=state_dict)
         if model == 'target':
-            return self.session.run(fetches=self.output_target, feed_dict={self.input: np.array(state)})
+            return self.session.run(fetches=self.output_target, feed_dict=state_dict)
 
-    def run(self, state):
+    def run(self, state, game_state):
         """ Perform action """
         if np.random.rand() < self.eps:
             # Random action
             action = np.random.randint(low=0, high=self.actions)
         else:
             # Policy action
-            q = self.predict('online', np.expand_dims(state, 0))
+            q = self.predict('online', np.expand_dims(state, 0), np.expand_dims(game_state, 0))
             action = np.argmax(q)
         # Decrease eps
         self.eps *= self.eps_decay
@@ -155,12 +159,12 @@ class DQNAgent:
             return
         # Sample batch
         batch = random.sample(self.memory, self.batch_size)
-        state, next_state, action, reward, done = map(np.array, zip(*batch))
+        state, next_state, game_state, next_game_state, action, reward, done = map(np.array, zip(*batch))
         # Get next q values from target network
-        next_q = self.predict('target', next_state)
+        next_q = self.predict('target', next_state, next_game_state)
         # Calculate discounted future reward
         if self.double_q:
-            q = self.predict('online', next_state)
+            q = self.predict('online', next_state, next_game_state)
             a = np.argmax(q, axis=1)
             target_q = reward + (1. - done) * self.gamma * next_q[np.arange(0, self.batch_size), a]
         else:
@@ -168,6 +172,7 @@ class DQNAgent:
         # Update model
         summary, _ = self.session.run(fetches=[self.summaries, self.train],
                                       feed_dict={self.input: state,
+                                                 self.game_input: game_state,
                                                  self.q_true: np.array(target_q),
                                                  self.a_true: np.array(action),
                                                  self.reward: np.mean(reward)})

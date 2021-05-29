@@ -12,7 +12,7 @@ import numpy as np
 
 env = DragonWarriorEnv()
 env = JoypadSpace(env, dragon_warrior_actions)
-# env.reset()
+env.reset()
 
 def display_top(snapshot, key_type='lineno', limit=10):
     snapshot = snapshot.filter_traces((
@@ -53,55 +53,59 @@ agent = DQNAgent(states=states, game_states=dw_info_states, actions=actions, max
                  double_q=True)
 
 # Episodes
-episodes = 5
+episodes = 300
 rewards = []
 
 # Timing
 start = time.time()
 step = 0
 
+def current_game_state(info_state):
+    return np.array(list(info_state.values()))
+
 # Main loop
 for e in range(episodes):
 
-    # Reset env, returns screen values
+    # Reset env, returns screen values into np array
     state = env.reset()
-    # Return values for RAM info
-    info_state = env.state_info
-    dw_game_states = np.array(list(info_state.values()))
+    # Return values for RAM info into np array
+    game_state = current_game_state(env.state_info)
 
     # Reward
     total_reward = 0
     iter = 0
 
     # Play
-    for _ in range(40001):
+    for _ in range(4001):
 
         # Show env (diabled), slows down learning by a factor of 3
-        env.render()
+        # env.render()
 
         # Run agent
-        action = agent.run(state=state)
+        action = agent.run(state=state, game_state=game_state)
 
         # Perform action
         next_state, reward, done, info = env.step(action=action)
+        next_game_state = current_game_state(env.state_info)
         # actions need to be performed over 4 frames in order to be executed
         # for i in range(5):
         #     env.frame_advance(action)
 
 
         # Remember transition
-        agent.add(experience=(state, next_state, action, reward, done))
+        agent.add(experience=(state, next_state, game_state, next_game_state, action, reward, done))
 
         # Update agent
         agent.learn()
 
         # Total reward
         total_reward += reward
-        print(total_reward, dragon_warrior_actions[action], iter)
+        # print(np.round(total_reward, 4), dragon_warrior_actions[action], iter)
         # input('press any key to advance')
 
-        # Update state
+        # Update state and game_state
         state = next_state
+        game_state = next_game_state
 
         # Increment
         iter += 1
