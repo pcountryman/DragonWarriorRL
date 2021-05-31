@@ -14,7 +14,7 @@ from keras.models import model_from_json
 
 class DQNAgent:
     '''DQN agent'''
-    def __init__(self, states, game_states, actions, max_memory, double_q, eps_method):
+    def __init__(self, states, game_states, actions, max_memory, double_q, eps_method, agent_save):
         self.states = states
         self.game_states = game_states.shape
         self.actions = actions
@@ -38,7 +38,7 @@ class DQNAgent:
         self.step = 0
         self.learn_each = 3
         self.learn_step = 0
-        self.save_each = 20000
+        self.save_each = agent_save
         self.double_q = double_q
 
     def build_model(self):
@@ -132,7 +132,7 @@ class DQNAgent:
         if model == 'target':
             return self.session.run(fetches=self.output_target, feed_dict=state_dict)
 
-    def run(self, state, game_state, eps_method):
+    def run(self, state, game_state, eps_method, eps_cos_frames):
         """ Perform action """
         if eps_method == 'exp_decay':
             if np.random.rand() < self.eps:
@@ -152,7 +152,7 @@ class DQNAgent:
             self.eps = max(self.eps_min, self.eps)
         if eps_method == 'cosine':
             # Decrease eps_now
-            self.eps_now = self.eps * 0.5 * (1 + math.cos(2 * math.pi * self.step / 3600))
+            self.eps_now = self.eps * 0.5 * (1 + math.cos(2 * math.pi * self.step / eps_cos_frames))
         # Increment step
         self.step += 1
         return action

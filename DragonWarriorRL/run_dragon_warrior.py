@@ -1,15 +1,11 @@
-import keras.models
-
 from dragon_warrior_env import DragonWarriorEnv
 from actions import dragon_warrior_actions
 from nes_py.wrappers import JoypadSpace
 from dqn_agent import DQNAgent
 import time
-import linecache
-import os
-import tracemalloc
 import numpy as np
 import pathlib
+import pandas as pd
 
 env = DragonWarriorEnv()
 env = JoypadSpace(env, dragon_warrior_actions)
@@ -19,15 +15,18 @@ env.reset()
 loadcheckpoint = True
 path_models = pathlib.Path('models/')
 filename_model = str(path_models / 'model')
-episodes = 100
-# render = False
-render = True
+episodes = 2
+render = False
+# render = True
 pause_after_action = False
 # pause_after_action = True
+# todo adjust cosine method, or change from boolean to variable controlling period of cosine
 eps_method = 'cosine'
 # eps_method = 'exp_decay'
+eps_cosine_method_frames_per_cycle = 36000  # travels one wavelength in this
 # print_stats_per_action = True
 print_stats_per_action = False
+frames_to_elapse_before_saving_agent = 20000
 ######
 
 # Parameters
@@ -41,13 +40,19 @@ dw_info_dict = env.state_info
 dw_info_states = np.array(list(dw_info_dict.values()))
 
 agent = DQNAgent(states=states, game_states=dw_info_states, actions=actions, max_memory=1000000,
-                 double_q=True, eps_method=eps_method)
+                 double_q=True, eps_method=eps_method, agent_save=frames_to_elapse_before_saving_agent)
 if loadcheckpoint:
     agent.restore_model(filename=filename_model)
     print('Checkpoint loaded')
 
 # Episodes
 rewards = []
+episode_number = []
+frames_in_episode = []
+epsilon_at_end = []
+key_found_in_episode = []
+gold_found_in_episode = []
+torch_found_in_episode = []
 
 # Timing
 start = time.time()
@@ -60,8 +65,7 @@ def current_game_state(info_state):
 for episode in range(episodes):
 
     # Reset env, returns screen values into np array
-    if render == True:
-        state = env.reset()
+    state = env.reset()
     # Return values for RAM info into np array
     game_state = current_game_state(env.state_info)
 
@@ -76,7 +80,8 @@ for episode in range(episodes):
             env.render()
 
         # Run agent
-        action = agent.run(state=state, game_state=game_state, eps_method=eps_method)
+        action = agent.run(state=state, game_state=game_state, eps_method=eps_method,
+                           eps_cos_frames=eps_cosine_method_frames_per_cycle)
 
         # Perform action
         next_state, reward, done, info = env.step(action=action)
@@ -105,14 +110,29 @@ for episode in range(episodes):
         if done or info['exit_throne_room']:
             break
 
-    # Rewards
-    rewards.append(total_reward / episode_frame)
-
     # todo change to average eps
     if eps_method == 'exp_decay':
         eps = agent.eps
     if eps_method == 'cosine':
         eps = agent.eps_now
+
+    # Rewards
+    rewards.append(total_reward / episode_frame)
+    frames_in_episode.append(episode_frame)
+    episode_number.append(episode)
+    epsilon_at_end.append(eps)
+    if info['throne_room_key'] == True:
+        key_found_in_episode.append(1)
+    if info['throne_room_key'] == False:
+        key_found_in_episode.append(0)
+    if info['throne_room_gold'] == True:
+        gold_found_in_episode.append(1)
+    if info['throne_room_gold'] == False:
+        gold_found_in_episode.append(0)
+    if info['throne_room_torch'] == True:
+        torch_found_in_episode.append(1)
+    if info['throne_room_torch'] == False:
+        torch_found_in_episode.append(0)
 
     # Print
     # todo build lists/dictionaries with this info, export as csv
@@ -137,6 +157,18 @@ for episode in range(episodes):
                                  t = info['throne_room_torch']))
         start = time.time()
         step = agent.step
+
+episode_dict = {
+    'episode' : episode_number,
+    'end_epsilon' : epsilon_at_end,
+    'frames' : frames_in_episode,
+    'ave_reward' : rewards,
+    'key_found' : key_found_in_episode,
+    'gold_found' : gold_found_in_episode,
+    'torch_found' : torch_found_in_episode,
+}
+results = pd.DataFrame(episode_dict).set_index('episode')
+results.to_csv(f'DW_Bot_results.csv')
 
 # Save rewards
 np.save('rewards.npy', rewards)
