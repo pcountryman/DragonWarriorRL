@@ -1,4 +1,5 @@
 from dragon_warrior_env import DragonWarriorEnv
+from dumb_dw_env import DumbDragonWarriorEnv
 from actions import dragon_warrior_actions
 from nes_py.wrappers import JoypadSpace
 from dqn_agent import DQNAgent
@@ -7,17 +8,15 @@ import numpy as np
 import pathlib
 import pandas as pd
 
-env = DragonWarriorEnv()
-env = JoypadSpace(env, dragon_warrior_actions)
-env.reset()
-
 ######
+use_dumb_dw_env = True
 loadcheckpoint = True
 path_models = pathlib.Path('models/')
 filename_model = str(path_models / 'model')
-episodes = 2
-render = False
-# render = True
+episodes = 50
+frames_per_episode = 10001
+# render = False
+render = True
 pause_after_action = False
 # pause_after_action = True
 # todo adjust cosine method, or change from boolean to variable controlling period of cosine
@@ -28,6 +27,13 @@ eps_cosine_method_frames_per_cycle = 36000  # travels one wavelength in this
 print_stats_per_action = False
 frames_to_elapse_before_saving_agent = 20000
 ######
+
+if use_dumb_dw_env == True:
+    env = DumbDragonWarriorEnv()
+else:
+    env = DragonWarriorEnv()
+env = JoypadSpace(env, dragon_warrior_actions)
+env.reset()
 
 # Parameters
 '''Observation space (env.observation_space.shape) is 240x256x3, the height and width of the space with 3 (RBG)
@@ -73,7 +79,7 @@ for episode in range(episodes):
     total_reward = 0
 
     # Play
-    for episode_frame in range(1001):
+    for episode_frame in range(frames_per_episode):
 
         if render == True:
             # Slows down learning by a factor of 3
@@ -168,7 +174,11 @@ episode_dict = {
     'torch_found' : torch_found_in_episode,
 }
 results = pd.DataFrame(episode_dict).set_index('episode')
-results.to_csv(f'DW_Bot_results.csv')
+
+if use_dumb_dw_env == True:
+    results.to_csv(f'dumb_DW_Bot_results.csv')
+else:
+    results.to_csv(f'DW_Bot_results.csv')
 
 # Save rewards
 np.save('rewards.npy', rewards)

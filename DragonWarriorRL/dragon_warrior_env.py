@@ -57,6 +57,8 @@ class DragonWarriorEnv(NESEnv):
         else:
             pass
 
+    # todo add init method to bypass naming and start menu
+
     def _is_busy(self):
         '''Return a boolean value if an action is being processed'''
         # any button can yield busy state, value of 0 indicates no action is being processed
@@ -304,6 +306,7 @@ class DragonWarriorEnv(NESEnv):
         self._hero_map = self._map_id()
         return _reward
 
+    # todo use 0x0096 value FF and 0x0097 value 0C for Command menu for directional actions
 
     # not used,
     def _throne_room_key_reward(self):

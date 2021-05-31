@@ -99,8 +99,11 @@ class DQNAgent:
     # todo grab weights from previous model somehow
     def restore_model(self, filename):
         ''' Update weights with previous model weights'''
-        # self.saver = tf.compat.v1.train.import_meta_graph('./models/model.meta')
-        self.saver.restore(self.session, filename)
+        try:
+            # self.saver = tf.compat.v1.train.import_meta_graph('./models/model.meta')
+            self.saver.restore(self.session, filename)
+        except:
+            print('Cannot load previous model')
 
 
     def copy_model(self):
