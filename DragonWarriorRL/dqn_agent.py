@@ -1,17 +1,20 @@
 import time
 import random
+import math
+import pathlib
 
 import keras.models
 import numpy as np
 from collections import deque
 import tensorflow as tf
 from matplotlib import pyplot as plt
+from keras.models import model_from_json
 
 # todo migrate to Tensorflow 2.0
 
 class DQNAgent:
     '''DQN agent'''
-    def __init__(self, states, game_states, actions, max_memory, double_q):
+    def __init__(self, states, game_states, actions, max_memory, double_q, eps_method):
         self.states = states
         self.game_states = game_states.shape
         self.actions = actions
@@ -21,10 +24,12 @@ class DQNAgent:
         self.session.run(tf.compat.v1.global_variables_initializer())
         self.memory = deque(maxlen=max_memory)
         self.eps = 1
+        if eps_method == 'cosine':
+            self.eps_now = 1
         # todo automate eps storage in saved info
         # todo eps_decay needs to be reward based with waviness
-        self.eps_decay = 0.99999975
-        # self.eps_decay = 0.99995
+        if eps_method == 'exp_decay':
+            self.eps_decay = 0.99999975
         self.eps_min = 0.1
         self.gamma = 0.90
         self.batch_size = 32
@@ -33,7 +38,7 @@ class DQNAgent:
         self.step = 0
         self.learn_each = 3
         self.learn_step = 0
-        self.save_each = 10000
+        self.save_each = 20000
         self.double_q = double_q
 
     def build_model(self):
@@ -92,11 +97,11 @@ class DQNAgent:
         self.writer = tf.compat.v1.summary.FileWriter(logdir='./logs', graph=self.session.graph)
 
     # todo grab weights from previous model somehow
-    def restore_model(self):
+    def restore_model(self, filename):
         ''' Update weights with previous model weights'''
-        self.saver = tf.compat.v1.train.import_meta_graph('./models/model.meta')
-        self.saver.restore(self.session, tf.compat.v1.train.latest_checkpoint('./models/'))
-        print(self.session.run('reward:'))
+        # self.saver = tf.compat.v1.train.import_meta_graph('./models/model.meta')
+        self.saver.restore(self.session, filename)
+
 
     def copy_model(self):
         """ Copy weights to target network """
@@ -109,6 +114,7 @@ class DQNAgent:
         """ Saves current model to disk """
         # self.saver.save(sess=self.session, save_path='./models/model', global_step=self.step)
         self.saver.save(sess=self.session, save_path='./models/model')
+        self.saver.save(sess=self.session, save_path='./models/model.h5')
 
 
     def add(self, experience):
@@ -126,18 +132,27 @@ class DQNAgent:
         if model == 'target':
             return self.session.run(fetches=self.output_target, feed_dict=state_dict)
 
-    def run(self, state, game_state):
+    def run(self, state, game_state, eps_method):
         """ Perform action """
-        if np.random.rand() < self.eps:
-            # Random action
-            action = np.random.randint(low=0, high=self.actions)
+        if eps_method == 'exp_decay':
+            if np.random.rand() < self.eps:
+                # Random action
+                action = np.random.randint(low=0, high=self.actions)
+        if eps_method == 'cosine':
+            if np.random.rand() < self.eps:
+                # Random action
+                action = np.random.randint(low=0, high=self.actions)
         else:
             # Policy action
             q = self.predict('online', np.expand_dims(state, 0), np.expand_dims(game_state, 0))
             action = np.argmax(q)
         # Decrease eps
-        self.eps *= self.eps_decay
-        self.eps = max(self.eps_min, self.eps)
+        if eps_method == 'exp_decay':
+            self.eps *= self.eps_decay
+            self.eps = max(self.eps_min, self.eps)
+        if eps_method == 'cosine':
+            # Decrease eps_now
+            self.eps_now = self.eps * 0.5 * (1 + math.cos(2 * math.pi * self.step / 3600))
         # Increment step
         self.step += 1
         return action
