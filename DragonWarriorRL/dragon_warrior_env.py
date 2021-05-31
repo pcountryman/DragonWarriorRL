@@ -307,6 +307,16 @@ class DragonWarriorEnv(NESEnv):
         return _reward
 
     # todo use 0x0096 value FF and 0x0097 value 0C for Command menu for directional actions
+    def command_window_state(self):
+        '''Return the hex value from the location of the command window state.'''
+        return self.ram[0x0096]
+
+    def is_command_window_open(self):
+        if self._command_window_state() == 255:
+            return True
+        else:
+            return False
+
 
     # not used,
     def _throne_room_key_reward(self):
