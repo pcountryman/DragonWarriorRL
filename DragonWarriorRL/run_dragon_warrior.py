@@ -9,23 +9,25 @@ import pathlib
 import pandas as pd
 
 ######
-use_dumb_dw_env = False
-loadcheckpoint = True
-path_models = pathlib.Path('models/')
-filename_model = str(path_models / 'model')
 episodes = 20
 frames_per_episode = 20000
-render = False
-# render = True
+loadcheckpoint = True
+# loadcheckpoint = False
+# render = False
+render = True
+print_stats_per_action = True
+# print_stats_per_action = False
 pause_after_action = False
 # pause_after_action = True
+
+use_dumb_dw_env = False
 # todo adjust cosine method, or change from boolean to variable controlling period of cosine
 eps_method = 'cosine'
 # eps_method = 'exp_decay'
-eps_cosine_method_frames_per_cycle = 36000  # travels one wavelength in this
-# print_stats_per_action = True
-print_stats_per_action = False
+eps_cosine_method_frames_per_cycle = 500  # travels one wavelength in this
 frames_to_elapse_before_saving_agent = 20000
+path_models = pathlib.Path('models/')
+filename_model = str(path_models / 'model')
 ######
 
 if use_dumb_dw_env == True:
@@ -144,33 +146,7 @@ def doaction(action, trailingnoons=None, presses=None, _button_map=env._button_m
         if render:
             env.render()
 
-# %% advance through naming
 
-# select a quest
-pressbutton('NOOP')
-pressbutton('A')
-pressbutton('A')
-
-# select a name
-pressbutton('A')
-pressbutton('A')
-
-steps = 7 # not optimized
-for step in range(steps):
-    pressbutton('right')
-    pressbutton('down')
-
-# select fast dialogue
-pressbutton('A')
-pressbutton('up')
-pressbutton('A')
-
-# advance through initial dialogue
-
-steps = 9 # not optimized
-for step in range(steps):
-    pressbutton('A')
-pressbutton('B')
 
 # %%
 
@@ -184,6 +160,34 @@ for episode in range(episodes):
 
     # Reward
     total_reward = 0
+
+    # %% advance through naming
+
+    # select a quest
+    pressbutton('NOOP')
+    pressbutton('A')
+    pressbutton('A')
+
+    # select a name
+    pressbutton('A')
+    pressbutton('A')
+
+    steps = 7  # not optimized
+    for step in range(steps):
+        pressbutton('right')
+        pressbutton('down')
+
+    # select fast dialogue
+    pressbutton('A')
+    pressbutton('up')
+    pressbutton('A')
+
+    # advance through initial dialogue
+
+    steps = 9  # not optimized
+    for step in range(steps):
+        pressbutton('A')
+    pressbutton('B')
 
     # Play
     for episode_frame in range(frames_per_episode):
