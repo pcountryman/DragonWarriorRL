@@ -13,10 +13,10 @@ use_dumb_dw_env = False
 loadcheckpoint = True
 path_models = pathlib.Path('models/')
 filename_model = str(path_models / 'model')
-episodes = 1
-frames_per_episode = 1
-# render = False
-render = True
+episodes = 20
+frames_per_episode = 20000
+render = False
+# render = True
 pause_after_action = False
 # pause_after_action = True
 # todo adjust cosine method, or change from boolean to variable controlling period of cosine
@@ -67,6 +67,113 @@ step = 0
 def current_game_state(info_state):
     return np.array(list(info_state.values()))
 
+def advanceframes(frames=100, render=render):
+    frames = 100
+
+    for attempt in range(frames):
+        env.frame_advance(0)
+        if render:
+            env.render()
+
+
+def pressbutton(button, trailingnoons=None, presses=None, _button_map=env._button_map,
+                ismenu=env.command_window_state(), render=render):
+
+    if presses is None:
+        if ismenu:
+            presses = 1
+        else:
+            presses = 11
+
+    dict_trailingnoons = {
+        'NOOP': 0,
+        'right': 100,
+        'left':  100,
+        'up':    100,
+        'down':  100,
+        'A': 250,
+        'B': 25
+    }
+
+    for press in range(presses):
+        env.frame_advance(_button_map[button])
+        if render:
+            env.render()
+    if trailingnoons is None:
+        trailingnoons = dict_trailingnoons[button]
+
+    for index in range(trailingnoons):
+        env.frame_advance(_button_map['NOOP'])
+        if render:
+            env.render()
+
+def doaction(action, trailingnoons=None, presses=None, _button_map=env._button_map,
+                ismenu=env.command_window_state(), render=render):
+
+    dict_inverse = dict()
+
+    for key in _button_map.keys():
+        value = _button_map[key]
+        dict_inverse[value] = key
+
+    if presses is None:
+        if ismenu:
+            presses = 1
+        else:
+            presses = 11
+
+    dict_trailingnoons = {
+        'NOOP': 0,
+        'right': 100,
+        'left':  100,
+        'up':    100,
+        'down':  100,
+        'A': 250,
+        'B': 25
+    }
+
+    for press in range(presses):
+        env.frame_advance(action)
+        if render:
+            env.render()
+    if trailingnoons is None:
+        trailingnoons = dict_trailingnoons[dict_inverse[action]]
+
+    for index in range(trailingnoons):
+        env.frame_advance(_button_map['NOOP'])
+        if render:
+            env.render()
+
+# %% advance through naming
+
+# select a quest
+pressbutton('NOOP')
+pressbutton('A')
+pressbutton('A')
+
+# select a name
+pressbutton('A')
+pressbutton('A')
+
+steps = 7 # not optimized
+for step in range(steps):
+    pressbutton('right')
+    pressbutton('down')
+
+# select fast dialogue
+pressbutton('A')
+pressbutton('up')
+pressbutton('A')
+
+# advance through initial dialogue
+
+steps = 9 # not optimized
+for step in range(steps):
+    pressbutton('A')
+pressbutton('B')
+
+# %%
+
 # Main loop
 for episode in range(episodes):
 
@@ -90,6 +197,11 @@ for episode in range(episodes):
                            eps_cos_frames=eps_cosine_method_frames_per_cycle)
 
         # Perform action
+
+        # doubling up on actions a little bit, but this seems like the easiest way to get better responsiveness
+        # in the button presses, just press them a few times first and then let the animation render for a bit
+        # to let the action complete.
+        doaction(env._action_map[action]) #, render=False)
         next_state, reward, done, info = env.step(action=action)
         next_game_state = current_game_state(env.state_info)
 
@@ -181,114 +293,6 @@ else:
 
 # Save rewards
 np.save('rewards.npy', rewards)
-
-def advanceframes(frames=100):
-    frames = 100
-
-    for attempt in range(frames):
-        env.frame_advance(0)
-        env.render()
-
-
-def pressbutton(button, trailingnoons=None, presses=None, _button_map=env._button_map,
-                ismenu=env.command_window_state()):
-
-    if presses is None:
-        if ismenu:
-            presses = 1
-        else:
-            presses = 11
-
-    dict_trailingnoons = {
-        'NOOP': 0,
-        'right': 100,
-        'left':  100,
-        'up':    100,
-        'down':  100,
-        'A': 250,
-        'B': 25
-    }
-
-    for press in range(presses):
-        env.frame_advance(_button_map[button]); env.render()
-    if trailingnoons is None:
-        trailingnoons = dict_trailingnoons[button]
-
-    for index in range(trailingnoons):
-            env.frame_advance(_button_map['NOOP']); env.render()
-
-# %% advance through naming
-
-# select a quest
-pressbutton('NOOP')
-pressbutton('A')
-pressbutton('A')
-
-# select a name
-pressbutton('A')
-pressbutton('A')
-
-steps = 7 # not optimized
-for step in range(steps):
-    pressbutton('right')
-    pressbutton('down')
-
-# select fast dialogue
-pressbutton('A')
-pressbutton('up')
-pressbutton('A')
-
-# advance through initial dialogue
-
-steps = 9 # not optimized
-for step in range(steps):
-    pressbutton('A')
-pressbutton('B')
-
-# %%
-
-advanceframes(frames=500)
-pressbutton('NOOP')
-pressbutton('right') # b?
-pressbutton('left') # up?
-pressbutton('up')
-pressbutton('down') # open menu 'a'?
-pressbutton('A') # select, menu, clear
-pressbutton('B') # back, clear
-
-# %%
-env.command_window_state()
-env.ram[0x0096]
-env.ram[0x0097]
-advanceframes()
-env.frame_advance(0);
-env.render()
-env.frame_advance(1); env.render() # Noon
-env.frame_advance(2); env.render() # right
-env.frame_advance(3); env.render() # left
-env.frame_advance(4); env.render() # up
-env.frame_advance(5); env.render() # down
-env.frame_advance(6); env.render() # a
-env.frame_advance(7); env.render() # b
-env.get_action_meanings()
-env.get_keys_to_action()
-env._button_map.values()
-# %%
-
-attempts = 100
-
-for attempt in range(attempts):
-    env.frame_advance(0)
-    env.render()
-
-# %%
-
-for index in range(1000):
-    if done is True:
-        break
-    next_state, reward, done, info = env.step(action=action)
-    print(index, done, reward, info)
-
 
 # %%
 
