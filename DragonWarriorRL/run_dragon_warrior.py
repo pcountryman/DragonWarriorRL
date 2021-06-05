@@ -1,12 +1,14 @@
-from dragon_warrior_env import DragonWarriorEnv
+import pathlib
+import time
+
+import numpy as np
+import pandas as pd
+from nes_py.wrappers import JoypadSpace
+
 # from dumb_dw_env import DumbDragonWarriorEnv
 from actions import dragon_warrior_actions
-from nes_py.wrappers import JoypadSpace
 from dqn_agent import DQNAgent
-import time
-import numpy as np
-import pathlib
-import pandas as pd
+from dragon_warrior_env import DragonWarriorEnv
 
 ######
 episodes = 20
@@ -15,8 +17,8 @@ loadcheckpoint = True
 # loadcheckpoint = False
 # render = False
 render = True
-print_stats_per_action = True
-# print_stats_per_action = False
+# print_stats_per_action = True
+print_stats_per_action = False
 pause_after_action = False
 # pause_after_action = True
 
@@ -35,6 +37,7 @@ if use_dumb_dw_env == True:
 else:
     env = DragonWarriorEnv()
 env = JoypadSpace(env, dragon_warrior_actions)
+# env = ButtonRemapper(env)
 env.reset()
 
 # Parameters
@@ -66,8 +69,10 @@ torch_found_in_episode = []
 start = time.time()
 step = 0
 
+
 def current_game_state(info_state):
     return np.array(list(info_state.values()))
+
 
 def advanceframes(frames=100, render=render):
     frames = 100
@@ -78,9 +83,10 @@ def advanceframes(frames=100, render=render):
             env.render()
 
 
+# %%
+
 def pressbutton(button, trailingnoons=None, presses=None, _button_map=env._button_map,
                 ismenu=env.command_window_state(), render=render):
-
     if presses is None:
         if ismenu:
             presses = 1
@@ -90,9 +96,9 @@ def pressbutton(button, trailingnoons=None, presses=None, _button_map=env._butto
     dict_trailingnoons = {
         'NOOP': 0,
         'right': 100,
-        'left':  100,
-        'up':    100,
-        'down':  100,
+        'left': 100,
+        'up': 100,
+        'down': 100,
         'A': 250,
         'B': 25
     }
@@ -109,9 +115,9 @@ def pressbutton(button, trailingnoons=None, presses=None, _button_map=env._butto
         if render:
             env.render()
 
-def doaction(action, trailingnoons=None, presses=None, _button_map=env._button_map,
-                ismenu=env.command_window_state(), render=render):
 
+def doaction(action, trailingnoons=None, presses=None, _button_map=env._button_map,
+             ismenu=env.command_window_state(), render=render):
     dict_inverse = dict()
 
     for key in _button_map.keys():
@@ -127,9 +133,9 @@ def doaction(action, trailingnoons=None, presses=None, _button_map=env._button_m
     dict_trailingnoons = {
         'NOOP': 0,
         'right': 100,
-        'left':  100,
-        'up':    100,
-        'down':  100,
+        'left': 100,
+        'up': 100,
+        'down': 100,
         'A': 250,
         'B': 25
     }
@@ -146,6 +152,28 @@ def doaction(action, trailingnoons=None, presses=None, _button_map=env._button_m
         if render:
             env.render()
 
+
+dict_combobuttonpresses = {'left': ['left'], 'right': ['right'], 'up': ['up'], 'down': ['down'],
+                           'take': ['A', 'right', 'down', 'down', 'down', 'A', 'A'],
+                           'door': ['A', 'right', 'down', 'down', 'A', 'A'],
+                           'stairs': ['A', 'down', 'down', 'A', 'A'],
+                           'A': ['A'], 'B': ['B']
+                           }
+
+
+# %%
+
+def presscombobutton(combobuttonname, _button_map=env._button_map,
+                     ismenu=env.command_window_state(), render=render, dict_combobuttonpresses=dict_combobuttonpresses):
+    for buttonname in dict_combobuttonpresses[combobuttonname]:
+        pressbutton(buttonname, render=render, ismenu=ismenu, _button_map=_button_map)
+
+# %%
+
+presscombobutton('B')
+presscombobutton('right')
+presscombobutton('down')
+presscombobutton('down')
 
 
 # %%
@@ -205,7 +233,8 @@ for episode in range(episodes):
         # doubling up on actions a little bit, but this seems like the easiest way to get better responsiveness
         # in the button presses, just press them a few times first and then let the animation render for a bit
         # to let the action complete.
-        doaction(env._action_map[action]) #, render=False)
+        doaction(env._action_map[action])  # , render=False)
+
         next_state, reward, done, info = env.step(action=action)
         next_game_state = current_game_state(env.state_info)
 
@@ -273,20 +302,20 @@ for episode in range(episodes):
                                  r=np.round(rewards[-1:], 4),
                                  # r=np.mean(rewards[-1:]),
                                  R=np.round(total_reward, 4),
-                                 k = info['throne_room_key'],
-                                 g = info['throne_room_gold'],
-                                 t = info['throne_room_torch']))
+                                 k=info['throne_room_key'],
+                                 g=info['throne_room_gold'],
+                                 t=info['throne_room_torch']))
         start = time.time()
         step = agent.step
 
 episode_dict = {
-    'episode' : episode_number,
-    'end_epsilon' : epsilon_at_end,
-    'frames' : frames_in_episode,
-    'ave_reward' : rewards,
-    'key_found' : key_found_in_episode,
-    'gold_found' : gold_found_in_episode,
-    'torch_found' : torch_found_in_episode,
+    'episode': episode_number,
+    'end_epsilon': epsilon_at_end,
+    'frames': frames_in_episode,
+    'ave_reward': rewards,
+    'key_found': key_found_in_episode,
+    'gold_found': gold_found_in_episode,
+    'torch_found': torch_found_in_episode,
 }
 results = pd.DataFrame(episode_dict).set_index('episode')
 
@@ -299,4 +328,3 @@ else:
 np.save('rewards.npy', rewards)
 
 # %%
-
