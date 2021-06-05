@@ -37,8 +37,8 @@ if use_dumb_dw_env == True:
     env = DumbDragonWarriorEnv()
 else:
     env = DragonWarriorEnv()
-env = JoypadSpace(env, dragon_warrior_actions)
-env = ButtonRemapper(env, actions=dragon_warrior_comboactions, renderflag=renderflag)
+# env = JoypadSpace(env, dragon_warrior_actions)
+env = ButtonRemapper(env, dragon_warrior_actions, dragon_warrior_comboactions, renderflag=renderflag)# actions=dragon_warrior_comboactions, renderflag=renderflag)
 env.reset()
 
 # Parameters
@@ -47,11 +47,12 @@ color channels. The agent can take 256 different possible actions.'''
 # todo add in RAM information
 states = (240, 256, 3)
 actions = env.action_space.n
+action_space_combo = env.action_space_combo.n
 
 dw_info_dict = env.state_info
 dw_info_states = np.array(list(dw_info_dict.values()))
 
-agent = DQNAgent(states=states, game_states=dw_info_states, actions=actions, max_memory=1000000,
+agent = DQNAgent(states=states, game_states=dw_info_states, actions=action_space_combo, max_memory=1000000,
                  double_q=True, eps_method=eps_method, agent_save=frames_to_elapse_before_saving_agent)
 if loadcheckpoint:
     agent.restore_model(filename=filename_model)
@@ -144,7 +145,7 @@ for episode in range(episodes):
         # Total reward
         total_reward += reward
         if print_stats_per_action == True:
-            print(np.round(total_reward, 4), dragon_warrior_actions[action],
+            print(np.round(total_reward, 4), dragon_warrior_comboactions[action],
                   episode_frame, np.round(agent.eps_now, 4))
         if pause_after_action == True:
             input('press any key to advance')
