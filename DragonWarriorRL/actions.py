@@ -28,3 +28,17 @@ dragon_warrior_actions = [
     ['B'],
     # ['start'],
 ]
+
+dragon_warrior_comboactions = [
+    # ['NOOP'],
+    ['right'],
+    ['left'],
+    ['up'],
+    ['down'],
+    # ['A'],
+    ['B'],
+    ['take'],
+    ['door'],
+    ['stairs']
+    # ['start'],
+]

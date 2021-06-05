@@ -4,9 +4,10 @@ import time
 import numpy as np
 import pandas as pd
 from nes_py.wrappers import JoypadSpace
+from environmentwrappers import ButtonRemapper
 
 # from dumb_dw_env import DumbDragonWarriorEnv
-from actions import dragon_warrior_actions
+from actions import dragon_warrior_actions, dragon_warrior_comboactions
 from dqn_agent import DQNAgent
 from dragon_warrior_env import DragonWarriorEnv
 
@@ -15,10 +16,10 @@ episodes = 20
 frames_per_episode = 20000
 loadcheckpoint = True
 # loadcheckpoint = False
-# render = False
-render = True
-# print_stats_per_action = True
-print_stats_per_action = False
+# renderflag = False
+renderflag = True
+print_stats_per_action = True
+# print_stats_per_action = False
 pause_after_action = False
 # pause_after_action = True
 
@@ -37,7 +38,7 @@ if use_dumb_dw_env == True:
 else:
     env = DragonWarriorEnv()
 env = JoypadSpace(env, dragon_warrior_actions)
-# env = ButtonRemapper(env)
+env = ButtonRemapper(env, actions=dragon_warrior_comboactions, renderflag=renderflag)
 env.reset()
 
 # Parameters
@@ -69,112 +70,8 @@ torch_found_in_episode = []
 start = time.time()
 step = 0
 
-
 def current_game_state(info_state):
     return np.array(list(info_state.values()))
-
-
-def advanceframes(frames=100, render=render):
-    frames = 100
-
-    for attempt in range(frames):
-        env.frame_advance(0)
-        if render:
-            env.render()
-
-
-# %%
-
-def pressbutton(button, trailingnoons=None, presses=None, _button_map=env._button_map,
-                ismenu=env.command_window_state(), render=render):
-    if presses is None:
-        if ismenu:
-            presses = 1
-        else:
-            presses = 11
-
-    dict_trailingnoons = {
-        'NOOP': 0,
-        'right': 100,
-        'left': 100,
-        'up': 100,
-        'down': 100,
-        'A': 250,
-        'B': 25
-    }
-
-    for press in range(presses):
-        env.frame_advance(_button_map[button])
-        if render:
-            env.render()
-    if trailingnoons is None:
-        trailingnoons = dict_trailingnoons[button]
-
-    for index in range(trailingnoons):
-        env.frame_advance(_button_map['NOOP'])
-        if render:
-            env.render()
-
-
-def doaction(action, trailingnoons=None, presses=None, _button_map=env._button_map,
-             ismenu=env.command_window_state(), render=render):
-    dict_inverse = dict()
-
-    for key in _button_map.keys():
-        value = _button_map[key]
-        dict_inverse[value] = key
-
-    if presses is None:
-        if ismenu:
-            presses = 1
-        else:
-            presses = 11
-
-    dict_trailingnoons = {
-        'NOOP': 0,
-        'right': 100,
-        'left': 100,
-        'up': 100,
-        'down': 100,
-        'A': 250,
-        'B': 25
-    }
-
-    for press in range(presses):
-        env.frame_advance(action)
-        if render:
-            env.render()
-    if trailingnoons is None:
-        trailingnoons = dict_trailingnoons[dict_inverse[action]]
-
-    for index in range(trailingnoons):
-        env.frame_advance(_button_map['NOOP'])
-        if render:
-            env.render()
-
-
-dict_combobuttonpresses = {'left': ['left'], 'right': ['right'], 'up': ['up'], 'down': ['down'],
-                           'take': ['A', 'right', 'down', 'down', 'down', 'A', 'A'],
-                           'door': ['A', 'right', 'down', 'down', 'A', 'A'],
-                           'stairs': ['A', 'down', 'down', 'A', 'A'],
-                           'A': ['A'], 'B': ['B']
-                           }
-
-
-# %%
-
-def presscombobutton(combobuttonname, _button_map=env._button_map,
-                     ismenu=env.command_window_state(), render=render, dict_combobuttonpresses=dict_combobuttonpresses):
-    for buttonname in dict_combobuttonpresses[combobuttonname]:
-        pressbutton(buttonname, render=render, ismenu=ismenu, _button_map=_button_map)
-
-# %%
-
-presscombobutton('B')
-presscombobutton('right')
-presscombobutton('down')
-presscombobutton('down')
-
 
 # %%
 
@@ -192,35 +89,35 @@ for episode in range(episodes):
     # %% advance through naming
 
     # select a quest
-    pressbutton('NOOP')
-    pressbutton('A')
-    pressbutton('A')
+    env.pressbutton('NOOP')
+    env.pressbutton('A')
+    env.pressbutton('A')
 
     # select a name
-    pressbutton('A')
-    pressbutton('A')
+    env.pressbutton('A')
+    env.pressbutton('A')
 
     steps = 7  # not optimized
     for step in range(steps):
-        pressbutton('right')
-        pressbutton('down')
+        env.pressbutton('right')
+        env.pressbutton('down')
 
     # select fast dialogue
-    pressbutton('A')
-    pressbutton('up')
-    pressbutton('A')
+    env.pressbutton('A')
+    env.pressbutton('up')
+    env.pressbutton('A')
 
     # advance through initial dialogue
 
     steps = 9  # not optimized
     for step in range(steps):
-        pressbutton('A')
-    pressbutton('B')
+        env.pressbutton('A')
+    env.pressbutton('B')
 
     # Play
     for episode_frame in range(frames_per_episode):
 
-        if render == True:
+        if renderflag == True:
             # Slows down learning by a factor of 3
             env.render()
 
@@ -233,7 +130,7 @@ for episode in range(episodes):
         # doubling up on actions a little bit, but this seems like the easiest way to get better responsiveness
         # in the button presses, just press them a few times first and then let the animation render for a bit
         # to let the action complete.
-        doaction(env._action_map[action])  # , render=False)
+        # env.doaction(env._action_map[action])  # , render=False)
 
         next_state, reward, done, info = env.step(action=action)
         next_game_state = current_game_state(env.state_info)

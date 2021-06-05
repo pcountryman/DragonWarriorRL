@@ -10,7 +10,7 @@ class DragonWarriorEnv(NESEnv):
     '''An OpenAI Gym interface to the NES game Final Fantasy'''
 
     # the range of rewards for each step
-    reward_range = (-15, 15)
+    reward_range = (-1, 1)
 
     def __init__(self):
         '''Initialize a new Dragon Warrior environment'''
@@ -220,7 +220,7 @@ class DragonWarriorEnv(NESEnv):
     def _death_penalty(self):
         '''Return the reward for dying'''
         if self._is_dead:
-            _reward = -25
+            _reward = -1
         else:
             _reward = 0
         return _reward
@@ -248,7 +248,7 @@ class DragonWarriorEnv(NESEnv):
     def _herb_reward(self):
         '''Return the reward for gaining herbs'''
         if self._current_magic_herbs() > self._herb_count:
-            _reward = 15
+            _reward = 1
         else:
             _reward = 0
         self._herb_count = self._current_magic_herbs()
@@ -258,7 +258,7 @@ class DragonWarriorEnv(NESEnv):
     def _torch_reward(self):
         '''Return the reward for gaining torches'''
         if self._current_torches() > self._hero_torches:
-            _reward = 5
+            _reward = 1
         else:
             _reward = 0
         self._hero_torches = self._current_torches()
@@ -268,7 +268,7 @@ class DragonWarriorEnv(NESEnv):
         '''Return the reward for opening a door using a magic key.
         The only way to get rid of a key is to use it.'''
         if self._current_magic_keys() < self._magic_keys:
-            _reward = 15
+            _reward = 1
         else:
             _reward = 0
         # Update key value
@@ -278,7 +278,7 @@ class DragonWarriorEnv(NESEnv):
     def _gain_magic_key_reward(self):
         '''Return the reward for acquiring a magic key'''
         if self._current_magic_keys() > self._magic_keys:
-            _reward = 15
+            _reward = 1
         else:
             _reward = 0
         # Update key value
@@ -298,7 +298,7 @@ class DragonWarriorEnv(NESEnv):
     # stationary penalty
     def _stationary_penalty(self):
         if self._is_same_pos():
-            _reward = -0.1
+            _reward = -1e-6
         else:
             _reward = 0
         self._hero_x_pos = self._current_map_x_pos()
