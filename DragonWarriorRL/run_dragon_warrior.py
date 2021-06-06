@@ -1,6 +1,6 @@
 import pathlib
 import time
-
+import datetime
 import numpy as np
 import pandas as pd
 from nes_py.wrappers import JoypadSpace
@@ -74,21 +74,11 @@ step = 0
 def current_game_state(info_state):
     return np.array(list(info_state.values()))
 
-# %%
+state = env.reset()
+# Return values for RAM info into np array
+game_state = current_game_state(env.state_info)
 
-# Main loop
-for episode in range(episodes):
-
-    # Reset env, returns screen values into np array
-    state = env.reset()
-    # Return values for RAM info into np array
-    game_state = current_game_state(env.state_info)
-
-    # Reward
-    total_reward = 0
-
-    # %% advance through naming
-
+def run_initial_sequence():
     # select a quest
     env.pressbutton('NOOP')
     env.pressbutton('A')
@@ -115,6 +105,246 @@ for episode in range(episodes):
         env.pressbutton('A')
     env.pressbutton('B')
 
+total_reward = 0
+episode_frame = 0
+
+def doaction(action, state=state, game_state=game_state, total_reward=total_reward, episode_frame=episode_frame, printtiming=False):
+
+    next_state, reward, done, info = env.step(action=action)
+    return action, next_state, reward, done, info, state, game_state, total_reward, episode_frame
+
+def actionpostprocessing(action, next_state, reward, done, info, state=state, game_state=game_state, total_reward=total_reward, episode_frame=episode_frame, printtiming=True):
+
+    now = datetime.datetime.now()
+    next_game_state = current_game_state(env.state_info)
+    if printtiming:
+        print(f'duration to step environment forward: {datetime.datetime.now() - now}')
+    # Remember transition
+    now = datetime.datetime.now()
+    agent.add(experience=(state, next_state, game_state, next_game_state, action, reward, done))
+    if printtiming:
+        print(f'duration to add transition to the agent: {datetime.datetime.now() - now}')
+    # Update agent
+    now = datetime.datetime.now()
+    agent.learn()
+    if printtiming:
+        print(f'duration to learn: {datetime.datetime.now() - now}')
+
+    # Total reward
+    total_reward += reward
+    if print_stats_per_action == True:
+        print(np.round(total_reward, 4), dragon_warrior_comboactions[action],
+              episode_frame, np.round(agent.eps_now, 4))
+    if pause_after_action == True:
+        input('press any key to advance')
+
+    return next_state, next_game_state, total_reward, episode_frame
+
+def w_press(printtiming=True):
+    results = doaction(env.dict_comboactionsindextoname['up'], printtiming=printtiming)
+    # episode_frame += 1
+    env.render()
+    return results
+
+def a_press(printtiming=True):
+    results = doaction(env.dict_comboactionsindextoname['left'], printtiming=printtiming)
+    # episode_frame += 1
+    env.render()
+    return results
+
+def s_press(printtiming=True):
+    results = doaction(env.dict_comboactionsindextoname['down'], printtiming=printtiming)
+    # episode_frame += 1
+    env.render()
+    return results
+
+def d_press(printtiming=True):
+    results = doaction(env.dict_comboactionsindextoname['right'], printtiming=printtiming)
+    # episode_frame += 1
+    env.render()
+    return results
+
+def stairs_press(printtiming=True):
+    results = doaction(env.dict_comboactionsindextoname['stairs'], printtiming=printtiming)
+    # episode_frame += 1
+    env.render()
+    return results
+
+def door_press(printtiming=True):
+    results = doaction(env.dict_comboactionsindextoname['door'], printtiming=printtiming)
+    # episode_frame += 1
+    env.render()
+    return results
+
+def take_press(printtiming=True):
+    results = doaction(env.dict_comboactionsindextoname['take'], printtiming=printtiming)
+    # episode_frame += 1
+    env.render()
+    return results
+def b_press(printtiming=True):
+    results = doaction(env.dict_comboactionsindextoname['B'], printtiming=printtiming)
+    # episode_frame += 1
+    env.render()
+    return results
+
+# %%
+
+class HumanPresser:
+
+    def __init__(self):
+        self.results = None
+        pass
+
+    def doaction(self, action, state=state, game_state=game_state, total_reward=total_reward, episode_frame=episode_frame, printtiming=False):
+
+        next_state, reward, done, info = env.step(action=action)
+        return action, next_state, reward, done, info, state, game_state, total_reward, episode_frame
+
+    @property
+    def dopostprocessingformpreviousstep(self, printtiming=True):
+
+        action, next_state, reward, done, info, state, game_state, total_reward, episode_frame = self.results
+        now = datetime.datetime.now()
+        next_game_state = current_game_state(env.state_info)
+        if printtiming:
+            print(f'duration to step environment forward: {datetime.datetime.now() - now}')
+        # Remember transition
+        now = datetime.datetime.now()
+        agent.add(experience=(state, next_state, game_state, next_game_state, action, reward, done))
+        if printtiming:
+            print(f'duration to add transition to the agent: {datetime.datetime.now() - now}')
+        # Update agent
+        now = datetime.datetime.now()
+        agent.learn()
+        if printtiming:
+            print(f'duration to learn: {datetime.datetime.now() - now}')
+
+        # Total reward
+        total_reward += reward
+        if print_stats_per_action == True:
+            print(np.round(total_reward, 4), dragon_warrior_comboactions[action],
+                  episode_frame, np.round(agent.eps_now, 4))
+        if pause_after_action == True:
+            input('press any key to advance')
+
+        return next_state, next_game_state, total_reward, episode_frame
+
+    def w(self, laststepwassuccessful=True, printtiming=True):
+        # if we don't pass anything assume the action when through and update the space.
+        if laststepwassuccessful:
+            self.dopostprocessingformpreviousstep
+        self.results = self.doaction(env.dict_comboactionsindextoname['up'], printtiming=printtiming)
+        env.render()
+
+    def a(self, laststepwassuccessful=True, printtiming=True):
+        # if we don't pass anything assume the action when through and update the space.
+        if laststepwassuccessful:
+            self.dopostprocessingformpreviousstep
+        self.results = self.doaction(env.dict_comboactionsindextoname['left'], printtiming=printtiming)
+        env.render()
+
+    def s(self, laststepwassuccessful=True, printtiming=True):
+        # if we don't pass anything assume the action when through and update the space.
+        if laststepwassuccessful:
+            self.dopostprocessingformpreviousstep
+        self.results = self.doaction(env.dict_comboactionsindextoname['down'], printtiming=printtiming)
+        env.render()
+
+    def d(self, laststepwassuccessful=True, printtiming=True):
+        # if we don't pass anything assume the action when through and update the space.
+        if laststepwassuccessful:
+            self.dopostprocessingformpreviousstep
+        self.results = self.doaction(env.dict_comboactionsindextoname['right'], printtiming=printtiming)
+        env.render()
+
+    def c(self, laststepwassuccessful=True, printtiming=True):
+        # if we don't pass anything assume the action when through and update the space.
+        if laststepwassuccessful:
+            self.dopostprocessingformpreviousstep
+        self.results = self.doaction(env.dict_comboactionsindextoname['stairs'], printtiming=printtiming)
+        env.render()
+
+    def r(self, laststepwassuccessful=True, printtiming=True):
+        # if we don't pass anything assume the action when through and update the space.
+        if laststepwassuccessful:
+            self.dopostprocessingformpreviousstep
+        self.results = self.doaction(env.dict_comboactionsindextoname['door'], printtiming=printtiming)
+        env.render()
+
+    def e(self, laststepwassuccessful=True, printtiming=True):
+        # if we don't pass anything assume the action when through and update the space.
+        if laststepwassuccessful:
+            self.dopostprocessingformpreviousstep
+        self.results = self.doaction(env.dict_comboactionsindextoname['take'], printtiming=printtiming)
+        env.render()
+
+    def b(self, laststepwassuccessful=True, printtiming=True):
+        # if we don't pass anything assume the action when through and update the space.
+        if laststepwassuccessful:
+            self.dopostprocessingformpreviousstep
+        self.results = self.doaction(env.dict_comboactionsindextoname['B'], printtiming=printtiming)
+        env.render()
+
+# %%
+#
+# s = HumanPresser()
+#
+# # %%
+#
+# env.pressbutton('A')
+# env.pressbutton('left')
+# env.pressbutton('right')
+# env.pressbutton('up')
+# env.pressbutton('down')
+# env.pressbutton('B')
+#
+# # %%
+#
+# s.s()
+# s.a()
+# s.w()
+#
+# s.x()
+
+# %%
+#
+# actionpostprocessing(env.dict_comboactionsindextoname['left']); episode_frame += 1
+# actionpostprocessing(env.dict_comboactionsindextoname['right']); episode_frame += 1
+# actionpostprocessing(env.dict_comboactionsindextoname['up']); episode_frame += 1
+# actionpostprocessing(env.dict_comboactionsindextoname['down']); episode_frame += 1
+# actionpostprocessing(env.dict_comboactionsindextoname['stairs']); episode_frame += 1
+# actionpostprocessing(env.dict_comboactionsindextoname['door']); episode_frame += 1
+# actionpostprocessing(env.dict_comboactionsindextoname['take']); episode_frame += 1
+# actionpostprocessing(env.dict_comboactionsindextoname['B']); episode_frame += 1
+# env.render()
+#
+# # %%
+#
+# actionpostprocessing(env.dict_comboactionsindextoname['right']); episode_frame += 1
+# actionpostprocessing(env.dict_comboactionsindextoname['take']); episode_frame += 1
+# actionpostprocessing(env.dict_comboactionsindextoname['right']); episode_frame += 1
+# actionpostprocessing(env.dict_comboactionsindextoname['take']); episode_frame += 1
+# actionpostprocessing(env.dict_comboactionsindextoname['right']); episode_frame += 1
+# actionpostprocessing(env.dict_comboactionsindextoname['right']); episode_frame += 1
+# actionpostprocessing(env.dict_comboactionsindextoname['right']); episode_frame += 1
+
+# %%
+
+# Main loop
+for episode in range(episodes):
+
+    # Reset env, returns screen values into np array
+    state = env.reset()
+    # Return values for RAM info into np array
+    game_state = current_game_state(env.state_info)
+
+    # Reward
+    total_reward = 0
+
+    # %% advance through naming
+
+    run_initial_sequence()
+
     # Play
     for episode_frame in range(frames_per_episode):
 
@@ -126,37 +356,15 @@ for episode in range(episodes):
         action = agent.run(state=state, game_state=game_state, eps_method=eps_method,
                            eps_cos_frames=eps_cosine_method_frames_per_cycle)
 
-        # Perform action
+        results = doaction(action, printtiming=True)
 
-        # doubling up on actions a little bit, but this seems like the easiest way to get better responsiveness
-        # in the button presses, just press them a few times first and then let the animation render for a bit
-        # to let the action complete.
-        # env.doaction(env._action_map[action])  # , render=False)
-
-        next_state, reward, done, info = env.step(action=action)
-        next_game_state = current_game_state(env.state_info)
-
-        # Remember transition
-        agent.add(experience=(state, next_state, game_state, next_game_state, action, reward, done))
-
-        # Update agent
-        agent.learn()
-
-        # Total reward
-        total_reward += reward
-        if print_stats_per_action == True:
-            print(np.round(total_reward, 4), dragon_warrior_comboactions[action],
-                  episode_frame, np.round(agent.eps_now, 4))
-        if pause_after_action == True:
-            input('press any key to advance')
-
+        action, next_state, reward, done, info, state, game_state, total_reward, episode_frame = results
         # Update state and game_state
-        state = next_state
-        game_state = next_game_state
+        state, game_state, total_reward, _ = actionpostprocessing(*results)
 
         # If done break loop
-        if done or info['exit_throne_room']:
-            break
+        # if done or info['exit_throne_room']:
+        #     break
 
     # todo change to average eps
     if eps_method == 'exp_decay':
@@ -226,3 +434,4 @@ else:
 np.save('rewards.npy', rewards)
 
 # %%
+

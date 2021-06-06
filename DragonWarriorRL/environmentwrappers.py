@@ -40,6 +40,11 @@ class ButtonRemapper(Wrapper):
         self.renderflag = renderflag
         self.list_controlleractions = list_controlleractions
         self.list_comboactions = list_comboactions
+        self.dict_comboactionsindextoname = dict()
+
+        for index, comboactionname in enumerate(list_comboactions):
+            self.dict_comboactionsindextoname[comboactionname[0]] = index
+
         self.env = env
         # create the new action space
         self.action_space = gym.spaces.Discrete(len(list_controlleractions))
@@ -90,10 +95,14 @@ class ButtonRemapper(Wrapper):
         # take the step and record the output
         # return self.env.step(self._action_map[action])
 
+        doextrapress = self.dict_combobuttonpresses[self.list_comboactions[action][0]] in [['left'], ['right'], ['up'], ['down']]
+        # if self.dict_combobuttonpresses[self.list_comboactions[action][0]] in [['left'], ['right'], ['up'], ['down']]:
+        #     self.pressbutton(actionname)
         # take the step and record the output
         for actionname in self.dict_combobuttonpresses[self.list_comboactions[action][0]]:
             # this will update multiple times, but we will only return the last value.
-            if actionname in ['left', 'right', 'up', 'down']:
+            # if actionname in ['left', 'right', 'up', 'down']:
+            if doextrapress:
                 self.pressbutton(actionname)
             next_state, reward, done, info = self.env.step(self._action_map[self.dict_takesactionnamereturnsbuttonindex[actionname]])
         return next_state, reward, done, info
