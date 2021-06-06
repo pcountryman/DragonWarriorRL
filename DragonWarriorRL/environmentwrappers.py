@@ -2,6 +2,7 @@ import gym
 from gym import Env
 from gym import Wrapper
 
+
 class ButtonRemapper(Wrapper):
     """An environment wrapper to convert binary to discrete action space."""
 
@@ -64,12 +65,16 @@ class ButtonRemapper(Wrapper):
             self._action_meanings[action] = ' '.join(button_list)
 
         self.dict_combobuttonpresses = {'left': ['left'], 'right': ['right'], 'up': ['up'], 'down': ['down'],
-                                   'take': ['A', 'right', 'down', 'down', 'down', 'A', 'A'],
-                                   'door': ['A', 'right', 'down', 'down', 'A', 'A'],
-                                   'stairs': ['A', 'down', 'down', 'A', 'A'],
-                                   'A': ['A'], 'B': ['B']
-                                   }
-
+                                        'menucol0row0': ['A', 'A', 'A'],
+                                        'menucol0row1': ['A', 'down', 'A', 'A'],
+                                        'menucol0row2': ['A', 'down', 'down', 'A', 'A'],
+                                        'menucol0row3': ['A', 'down', 'down', 'down', 'A', 'A'],
+                                        'menucol1row0': ['A', 'right', 'A', 'A'],
+                                        'menucol1row1': ['A', 'right', 'down', 'A', 'A'],
+                                        'menucol1row2': ['A', 'right', 'down', 'down', 'A', 'A'],
+                                        'menucol1row3': ['A', 'right', 'down', 'down', 'down', 'A', 'A'],
+                                        'A': ['A'], 'B': ['B']
+                                        }
 
         self.dict_takesactionnamereturnsbuttonindex = dict()
         # env._action_meanings = {0: 'NOOP', 1: 'right', 2: 'left', 3: 'up', 4: 'down', 5: 'A', 6: 'B'}
@@ -95,7 +100,8 @@ class ButtonRemapper(Wrapper):
         # take the step and record the output
         # return self.env.step(self._action_map[action])
 
-        doextrapress = self.dict_combobuttonpresses[self.list_comboactions[action][0]] in [['left'], ['right'], ['up'], ['down']]
+        doextrapress = self.dict_combobuttonpresses[self.list_comboactions[action][0]] in [['left'], ['right'], ['up'],
+                                                                                           ['down']]
         # if self.dict_combobuttonpresses[self.list_comboactions[action][0]] in [['left'], ['right'], ['up'], ['down']]:
         #     self.pressbutton(actionname)
         # take the step and record the output
@@ -104,7 +110,8 @@ class ButtonRemapper(Wrapper):
             # if actionname in ['left', 'right', 'up', 'down']:
             if doextrapress:
                 self.pressbutton(actionname)
-            next_state, reward, done, info = self.env.step(self._action_map[self.dict_takesactionnamereturnsbuttonindex[actionname]])
+            next_state, reward, done, info = self.env.step(
+                self._action_map[self.dict_takesactionnamereturnsbuttonindex[actionname]])
         return next_state, reward, done, info
 
     def reset(self):
@@ -230,4 +237,3 @@ class ButtonRemapper(Wrapper):
             self.env.frame_advance(self._button_map['NOOP'])
             if self.renderflag:
                 self.env.render()
-

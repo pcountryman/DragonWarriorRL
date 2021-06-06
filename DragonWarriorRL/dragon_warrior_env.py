@@ -227,11 +227,11 @@ class DragonWarriorEnv(NESEnv):
 
     def _exp_reward(self):
         # return the reward based on party experience gained
-        _reward = (self._current_exp() - self._hero_exp) / (self._hero_exp + 0.0001) * 100
+        _reward = (self._current_exp() - self._hero_exp)
 
-        # do not reward paltry experience gains of 2% or less of hero exp
-        if (_reward / (self._hero_exp + 0.00001)) < 2:
-            _reward = 0
+        # # do not reward paltry experience gains of 2% or less of hero exp
+        # if (_reward / (self._hero_exp + 0.00001)) < 2:
+        #     _reward = 0
 
         # determine new hero exp value from previous exp values
         self._hero_exp = self._current_exp()

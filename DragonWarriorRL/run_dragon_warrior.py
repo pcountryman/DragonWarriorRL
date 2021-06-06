@@ -257,25 +257,32 @@ class HumanPresser:
         self.results = self.doaction(env.dict_comboactionsindextoname['right'], printtiming=printtiming)
         env.render()
 
-    def c(self, laststepwassuccessful=True, printtiming=True):
+    def stairs(self, laststepwassuccessful=True, printtiming=True):
         # if we don't pass anything assume the action when through and update the space.
         if laststepwassuccessful:
             self.dopostprocessingformpreviousstep
-        self.results = self.doaction(env.dict_comboactionsindextoname['stairs'], printtiming=printtiming)
+        self.results = self.doaction(env.dict_comboactionsindextoname['menucol0row2'], printtiming=printtiming)
         env.render()
 
-    def r(self, laststepwassuccessful=True, printtiming=True):
+    def door(self, laststepwassuccessful=True, printtiming=True):
         # if we don't pass anything assume the action when through and update the space.
         if laststepwassuccessful:
             self.dopostprocessingformpreviousstep
-        self.results = self.doaction(env.dict_comboactionsindextoname['door'], printtiming=printtiming)
+        self.results = self.doaction(env.dict_comboactionsindextoname['menucol1row2'], printtiming=printtiming)
         env.render()
 
-    def e(self, laststepwassuccessful=True, printtiming=True):
+    def take(self, laststepwassuccessful=True, printtiming=True):
         # if we don't pass anything assume the action when through and update the space.
         if laststepwassuccessful:
             self.dopostprocessingformpreviousstep
-        self.results = self.doaction(env.dict_comboactionsindextoname['take'], printtiming=printtiming)
+        self.results = self.doaction(env.dict_comboactionsindextoname['menucol1row3'], printtiming=printtiming)
+        env.render()
+
+    def attack(self, laststepwassuccessful=True, printtiming=True):
+        # if we don't pass anything assume the action when through and update the space.
+        if laststepwassuccessful:
+            self.dopostprocessingformpreviousstep
+        self.results = self.doaction(env.dict_comboactionsindextoname['menucol0row0'], printtiming=printtiming)
         env.render()
 
     def b(self, laststepwassuccessful=True, printtiming=True):
@@ -434,4 +441,34 @@ else:
 np.save('rewards.npy', rewards)
 
 # %%
-
+#
+# s.d(laststepwassuccessful=False)
+# s.take()
+# s.d()
+# s.take()
+# s.d()
+# [s.d() for index in range(3)]
+# s.w()
+# [s.w() for index in range(3)]
+# s.a()
+# s.a()
+# s.take()
+# s.d()
+# s.d()
+# s.s()
+# [s.s() for index in range(5)]
+# s.a()
+# [s.a() for index in range(5)]
+# s.s()
+# s.door()
+# s.s()
+# s.s()
+# s.d()
+# [s.d() for index in range(5)]
+# s.stairs()
+# s.d()
+# s.d()
+# s.s()
+# [s.s() for index in range(8)]
+# s.a()
+# [s.s() for index in range(6)]
