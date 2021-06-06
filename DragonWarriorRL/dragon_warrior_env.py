@@ -10,7 +10,7 @@ class DragonWarriorEnv(NESEnv):
     '''An OpenAI Gym interface to the NES game Final Fantasy'''
 
     # the range of rewards for each step
-    reward_range = (-15, 15)
+    reward_range = (-1, 1)
 
     def __init__(self):
         '''Initialize a new Dragon Warrior environment'''
@@ -220,18 +220,18 @@ class DragonWarriorEnv(NESEnv):
     def _death_penalty(self):
         '''Return the reward for dying'''
         if self._is_dead:
-            _reward = -25
+            _reward = -1
         else:
             _reward = 0
         return _reward
 
     def _exp_reward(self):
         # return the reward based on party experience gained
-        _reward = (self._current_exp() - self._hero_exp) / (self._hero_exp + 0.0001) * 100
+        _reward = (self._current_exp() - self._hero_exp)
 
-        # do not reward paltry experience gains of 2% or less of hero exp
-        if (_reward / (self._hero_exp + 0.00001)) < 2:
-            _reward = 0
+        # # do not reward paltry experience gains of 2% or less of hero exp
+        # if (_reward / (self._hero_exp + 0.00001)) < 2:
+        #     _reward = 0
 
         # determine new hero exp value from previous exp values
         self._hero_exp = self._current_exp()
@@ -248,7 +248,7 @@ class DragonWarriorEnv(NESEnv):
     def _herb_reward(self):
         '''Return the reward for gaining herbs'''
         if self._current_magic_herbs() > self._herb_count:
-            _reward = 15
+            _reward = 1
         else:
             _reward = 0
         self._herb_count = self._current_magic_herbs()
@@ -258,7 +258,7 @@ class DragonWarriorEnv(NESEnv):
     def _torch_reward(self):
         '''Return the reward for gaining torches'''
         if self._current_torches() > self._hero_torches:
-            _reward = 5
+            _reward = 1
         else:
             _reward = 0
         self._hero_torches = self._current_torches()
@@ -268,7 +268,7 @@ class DragonWarriorEnv(NESEnv):
         '''Return the reward for opening a door using a magic key.
         The only way to get rid of a key is to use it.'''
         if self._current_magic_keys() < self._magic_keys:
-            _reward = 15
+            _reward = 1
         else:
             _reward = 0
         # Update key value
@@ -278,7 +278,7 @@ class DragonWarriorEnv(NESEnv):
     def _gain_magic_key_reward(self):
         '''Return the reward for acquiring a magic key'''
         if self._current_magic_keys() > self._magic_keys:
-            _reward = 15
+            _reward = 1
         else:
             _reward = 0
         # Update key value
@@ -298,7 +298,7 @@ class DragonWarriorEnv(NESEnv):
     # stationary penalty
     def _stationary_penalty(self):
         if self._is_same_pos():
-            _reward = -0.1
+            _reward = -1e-6
         else:
             _reward = 0
         self._hero_x_pos = self._current_map_x_pos()
@@ -307,6 +307,16 @@ class DragonWarriorEnv(NESEnv):
         return _reward
 
     # todo use 0x0096 value FF and 0x0097 value 0C for Command menu for directional actions
+    def command_window_state(self):
+        '''Return the hex value from the location of the command window state.'''
+        return self.ram[0x0096]
+
+    def is_command_window_open(self):
+        if self._command_window_state() == 255:
+            return True
+        else:
+            return False
+
 
     # not used,
     def _throne_room_key_reward(self):
