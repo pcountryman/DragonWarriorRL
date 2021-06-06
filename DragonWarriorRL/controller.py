@@ -1,5 +1,6 @@
 import utilities
 
+# TODO: try to come up with a better name for this.
 
 class HumanPresser:
     '''Provides a set of methods that allows a human to control the emulator and to update the model and Q-table as if

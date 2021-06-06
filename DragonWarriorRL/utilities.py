@@ -6,6 +6,8 @@ import numpy as np
 def current_game_state(info_state):
     return np.array(list(info_state.values()))
 
+# TODO: Rename to Executor and test.
+# TODO: Prove to myself that setters are really worth it and be prepared to discuss.
 
 class Actor:
     '''
@@ -71,9 +73,9 @@ class Actor:
 
         # return self.results
 
-    def dopostprocessingformpreviousstep(self, printtiming=True):
-        '''Gets the game state, adds the last iteration to the Q-table, trains the neural network, and updates the
-        reward.'''
+    def dopostprocessingfrompreviousstep(self, printtiming=True):
+        '''Gets the game state, adds the last iteration to the Q-table, trains the neural network, updates the
+        reward, and updates the game state and state.'''
 
         action, next_state, reward, done, info = self.results
         now = datetime.datetime.now()
@@ -93,6 +95,7 @@ class Actor:
 
         # Total reward
         self.total_reward += reward
+
         if self.print_stats_per_action == True:
             print(np.round(self.total_reward, 4), self.dragon_warrior_comboactions[action],
                   self.episode_frame, np.round(self.agent.eps_now, 4))

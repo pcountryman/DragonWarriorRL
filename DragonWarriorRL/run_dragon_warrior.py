@@ -145,7 +145,9 @@ for episode in range(episodes):
         action, next_state, reward, done, info = actor.results
 
         # Update state and game_state
-        actor.dopostprocessingformpreviousstep
+        actor.dopostprocessingfrompreviousstep()
+
+        # pull out state information so we can pass it into the agent in the next iteration.
         game_state = actor.game_state
         state = actor.state
 

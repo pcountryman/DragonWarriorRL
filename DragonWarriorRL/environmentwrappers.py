@@ -97,21 +97,28 @@ class ButtonRemapper(Wrapper):
             - (dict) a dictionary of extra information
 
         """
+        # Old version:
         # take the step and record the output
         # return self.env.step(self._action_map[action])
 
+        # Where [['left'], ['right'], ['up'],['down']] are the combo button pressing names. If it is these things
+        # we need extra presses to increase the probability that the emulator processes the action press.
         doextrapress = self.dict_combobuttonpresses[self.list_comboactions[action][0]] in [['left'], ['right'], ['up'],
                                                                                            ['down']]
-        # if self.dict_combobuttonpresses[self.list_comboactions[action][0]] in [['left'], ['right'], ['up'], ['down']]:
-        #     self.pressbutton(actionname)
-        # take the step and record the output
+
+        # Iterate through the simple button presses that the combo button presses are built from and convert them
+        # into the corresponding bits that the emulator (env.step) is expecting.
         for actionname in self.dict_combobuttonpresses[self.list_comboactions[action][0]]:
-            # this will update multiple times, but we will only return the last value.
-            # if actionname in ['left', 'right', 'up', 'down']:
+
+            # Recall again we only do extra presses if actionname in [['left'], ['right'], ['up'],['down']]
             if doextrapress:
+                # TODO: See if we can come up with more effective logic. Also implement frame buffering.
                 self.pressbutton(actionname)
+
+            # this will update multiple times, but we will only return the last value.
             next_state, reward, done, info = self.env.step(
                 self._action_map[self.dict_takesactionnamereturnsbuttonindex[actionname]])
+
         return next_state, reward, done, info
 
     def reset(self):
@@ -140,42 +147,24 @@ class ButtonRemapper(Wrapper):
         list_controlleractions = sorted(self._action_meanings.keys())
         return [self._action_meanings[action] for action in list_controlleractions]
 
-    #
-    # def __init__(self, env: Env, actions, renderflag=False):
-    #     super().__init__(env)
-    #     # # create the new action space
-    #     # self.action_space = gym.spaces.Discrete(len(actions))
-    #     # # create the action map from the list of discrete actions
-    #     # self._action_map = {}
-    #     # self._action_meanings = {}
-    #     # # iterate over all the actions (as button lists)
-    #     # for action, button_list in enumerate(actions):
-    #     #     # the value of this action's bitmap
-    #     #     byte_action = 0
-    #     #     # iterate over the buttons in this button list
-    #     #     for button in button_list:
-    #     #         byte_action |= self._button_map[button]
-    #     #     # set this action maps value to the byte action value
-    #     #     self._action_map[action] = byte_action
-    #     #     self._action_meanings[action] = ' '.join(button_list)
-    #
-
-    #
-    #
     def presscombobutton(self, combobuttonname):
         for buttonname in self.dict_combobuttonpresses[combobuttonname]:
             self.pressbutton(buttonname)
 
     def advanceframes(self, frames=100):
-
         for attempt in range(frames):
             self.env.frame_advance(0)
             if self.renderflag:
                 self.env.render()
 
+    # TODO: update button press to use RAM information to wait for actions to be finished instead of lookup tables.
     def pressbutton(self, button, trailingnoons=None, presses=None):
+        '''This executes combo button presses mean to make it more likely for the emulator to accept the button press.'''
 
+        # Menu does not need a bunch of extra presses.
+        # TODO: make sure the default presses is still good when we implement frame buffering.
         if presses is None:
+            # If the menu is open.
             if self.env.command_window_state():
                 presses = 1
             else:
@@ -190,48 +179,15 @@ class ButtonRemapper(Wrapper):
             'A': 250,
             'B': 25
         }
+
 
         for press in range(presses):
             self.frame_advance(self._button_map[button])
             if self.renderflag:
                 self.render()
+
         if trailingnoons is None:
             trailingnoons = dict_trailingnoons[button]
-
-        for index in range(trailingnoons):
-            self.env.frame_advance(self._button_map['NOOP'])
-            if self.renderflag:
-                self.env.render()
-
-    def doaction(self, action, trailingnoons=None, presses=None):
-        dict_inverse = dict()
-
-        for key in self._button_map.keys():
-            value = self._button_map[key]
-            dict_inverse[value] = key
-
-        if presses is None:
-            if self.env.command_window_state():
-                presses = 1
-            else:
-                presses = 11
-
-        dict_trailingnoons = {
-            'NOOP': 0,
-            'right': 100,
-            'left': 100,
-            'up': 100,
-            'down': 100,
-            'A': 250,
-            'B': 25
-        }
-
-        for press in range(presses):
-            self.env.frame_advance(action)
-            if self.renderflag:
-                self.env.render()
-        if trailingnoons is None:
-            trailingnoons = dict_trailingnoons[dict_inverse[action]]
 
         for index in range(trailingnoons):
             self.env.frame_advance(self._button_map['NOOP'])
