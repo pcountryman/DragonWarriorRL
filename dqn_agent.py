@@ -1,20 +1,19 @@
-import time
 import random
 import math
-import pathlib
 
-import keras.models
 import numpy as np
 from collections import deque
 import tensorflow as tf
-from matplotlib import pyplot as plt
-from keras.models import model_from_json
+
 
 # todo migrate to Tensorflow 2.0
 
 class DQNAgent:
-    '''DQN agent'''
-    def __init__(self, states, game_states, actions, max_memory, double_q, eps_method, agent_save):
+    """DQN agent"""
+
+    def __init__(self, states, game_states, actions, max_memory, double_q,
+                 arctansin_yint, arctansin_amp, arctansin_freq, arctansin_delta,
+                 eps_method, agent_save):
         self.states = states
         self.game_states = game_states.shape
         self.actions = actions
@@ -40,28 +39,32 @@ class DQNAgent:
         self.learn_step = 0
         self.save_each = agent_save
         self.double_q = double_q
+        self.arctansin_yint = arctansin_yint
+        self.arctansin_amp = arctansin_amp
+        self.arctansin_freq = arctansin_freq
+        self.arctansin_delta = arctansin_delta
 
     def build_model(self):
-        '''Model builder function'''
+        """Model builder function"""
         tf.compat.v1.disable_eager_execution()
-        self.input = tf.compat.v1.placeholder(dtype=tf.float32, shape=(None, ) + self.states, name='input')
+        self.input = tf.compat.v1.placeholder(dtype=tf.float32, shape=(None,) + self.states, name='input')
         self.q_true = tf.compat.v1.placeholder(dtype=tf.float32, shape=[None], name='labels')
         self.a_true = tf.compat.v1.placeholder(dtype=tf.int32, shape=[None], name='actions')
         self.reward = tf.compat.v1.placeholder(dtype=tf.float32, shape=[], name='reward')
         self.input_float = tf.cast(self.input, dtype=tf.float32) / 255.
         # Preston accounts for Dragon Warrior RAM info
-        self.game_input = tf.compat.v1.placeholder(dtype=tf.float32, shape=(None, ) + self.game_states,
-                                                   name = 'game_input')
+        self.game_input = tf.compat.v1.placeholder(dtype=tf.float32, shape=(None,) + self.game_states,
+                                                   name='game_input')
         # print(self.input, self.game_input)
         # input('pause for test')
         # Online network
         with tf.compat.v1.variable_scope('online'):
             self.conv_1 = tf.compat.v1.layers.conv2d(inputs=self.input_float, filters=32, kernel_size=8, strides=4,
-                                           activation=tf.nn.relu)
+                                                     activation=tf.nn.relu)
             self.conv_2 = tf.compat.v1.layers.conv2d(inputs=self.conv_1, filters=64, kernel_size=4, strides=2,
-                                           activation=tf.nn.relu)
+                                                     activation=tf.nn.relu)
             self.conv_3 = tf.compat.v1.layers.conv2d(inputs=self.conv_2, filters=64, kernel_size=3, strides=1,
-                                           activation=tf.nn.relu)
+                                                     activation=tf.nn.relu)
             self.flatten = tf.compat.v1.layers.flatten(inputs=self.conv_3)
             # Preston combines game pixel info with RAM info
             self.total_states = tf.concat((self.flatten, self.game_input), axis=1)
@@ -69,12 +72,15 @@ class DQNAgent:
             self.output = tf.compat.v1.layers.dense(inputs=self.dense, units=self.actions, name='output')
         # Target network
         with tf.compat.v1.variable_scope('target'):
-            self.conv_1_target = tf.compat.v1.layers.conv2d(inputs=self.input_float, filters=32, kernel_size=8, strides=4,
-                                                  activation=tf.nn.relu)
-            self.conv_2_target = tf.compat.v1.layers.conv2d(inputs=self.conv_1_target, filters=64, kernel_size=4, strides=2,
-                                                  activation=tf.nn.relu)
-            self.conv_3_target = tf.compat.v1.layers.conv2d(inputs=self.conv_2_target, filters=64, kernel_size=3, strides=1,
-                                                  activation=tf.nn.relu)
+            self.conv_1_target = tf.compat.v1.layers.conv2d(inputs=self.input_float, filters=32, kernel_size=8,
+                                                            strides=4,
+                                                            activation=tf.nn.relu)
+            self.conv_2_target = tf.compat.v1.layers.conv2d(inputs=self.conv_1_target, filters=64, kernel_size=4,
+                                                            strides=2,
+                                                            activation=tf.nn.relu)
+            self.conv_3_target = tf.compat.v1.layers.conv2d(inputs=self.conv_2_target, filters=64, kernel_size=3,
+                                                            strides=1,
+                                                            activation=tf.nn.relu)
             self.flatten_target = tf.compat.v1.layers.flatten(inputs=self.conv_3_target)
             # Preston combines game pixel info with RAM info
             self.total_states_target = tf.concat((self.flatten, self.game_input), axis=1)
@@ -98,13 +104,12 @@ class DQNAgent:
 
     # todo grab weights from previous model somehow
     def restore_model(self, filename):
-        ''' Update weights with previous model weights'''
+        """ Update weights with previous model weights"""
         try:
             # self.saver = tf.compat.v1.train.import_meta_graph('./models/model.meta')
             self.saver.restore(self.session, filename)
         except:
             print('Cannot load previous model')
-
 
     def copy_model(self):
         """ Copy weights to target network """
@@ -119,14 +124,13 @@ class DQNAgent:
         self.saver.save(sess=self.session, save_path='./models/model')
         self.saver.save(sess=self.session, save_path='./models/model.h5')
 
-
     def add(self, experience):
         """ Add observation to experience """
         self.memory.append(experience)
 
     def predict(self, model, state, game_state):
         state_dict = {self.input: np.array(state)}
-        game_state_dict = {self.game_input : np.array(game_state)}
+        game_state_dict = {self.game_input: np.array(game_state)}
         state_dict.update(game_state_dict)
         """ Prediction """
         # todo make sure model pulls all state info for feed_dict
@@ -141,7 +145,7 @@ class DQNAgent:
             if np.random.rand() < self.eps:
                 # Random action
                 action = np.random.randint(low=0, high=self.actions)
-        if eps_method == 'cosine':
+        if eps_method in ['cosine', 'arctansin']:
             if np.random.rand() < self.eps:
                 # Random action
                 action = np.random.randint(low=0, high=self.actions)
@@ -156,6 +160,10 @@ class DQNAgent:
         if eps_method == 'cosine':
             # Decrease eps_now
             self.eps_now = self.eps * 0.5 * (1 + math.cos(2 * math.pi * self.step / eps_cos_frames))
+        if eps_method == 'arctansin':
+            # Decrease eps_now
+            self.eps_now = self.eps * (self.arctansin_yint + 2 * self.arctansin_amp / math.pi * (
+                math.atan(math.sin(2 * math.pi * self.arctansin_freq) / self.arctansin_delta)))
         # Increment step
         self.step += 1
         return action

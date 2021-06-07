@@ -6,15 +6,16 @@ import numpy as np
 def current_game_state(info_state):
     return np.array(list(info_state.values()))
 
+
 # TODO: Rename to Executor and test.
 # TODO: Prove to myself that setters are really worth it and be prepared to discuss.
 
 class Actor:
-    '''
+    """
     The actor groups many of the Q-learning steps into a few methods that make it more convenient to call those
     frequently strung together steps. It allows these groups of steps to be shared in the bot controlled and human
     controlled scripts, which is intended to make it easier to maintain both systems.
-    '''
+    """
 
     def __init__(self, env, state, game_state, total_reward, agent, print_stats_per_action,
                  dragon_warrior_comboactions, pause_after_action, _episode_frame=0):
@@ -66,7 +67,7 @@ class Actor:
         self._results = value
 
     def doaction(self, action):
-        '''Executes the action and returns the new state and reward.'''
+        """Executes the action and returns the new state and reward."""
         # next_state, reward, done, info = self.env.step(action=action)
         next_state, reward, done, info = self.env.step(action=action)
         self.results = action, next_state, reward, done, info
@@ -74,8 +75,8 @@ class Actor:
         # return self.results
 
     def dopostprocessingfrompreviousstep(self, printtiming=True):
-        '''Gets the game state, adds the last iteration to the Q-table, trains the neural network, updates the
-        reward, and updates the game state and state.'''
+        """Gets the game state, adds the last iteration to the Q-table, trains the neural network, updates the
+        reward, and updates the game state and state."""
 
         action, next_state, reward, done, info = self.results
         now = datetime.datetime.now()
@@ -96,14 +97,13 @@ class Actor:
         # Total reward
         self.total_reward += reward
 
-        if self.print_stats_per_action == True:
+        if self.print_stats_per_action:
             print(np.round(self.total_reward, 4), self.dragon_warrior_comboactions[action],
                   self.episode_frame, np.round(self.agent.eps_now, 4))
-        if self.pause_after_action == True:
+        if self.pause_after_action:
             input('press any key to advance')
 
         self.game_state = next_game_state
         self.state = next_state
 
 # %%
-
