@@ -23,7 +23,7 @@ class DQNAgent:
         self.session.run(tf.compat.v1.global_variables_initializer())
         self.memory = deque(maxlen=max_memory)
         self.eps = 1
-        if eps_method == 'cosine':
+        if eps_method in ['cosine', 'arctansin']:
             self.eps_now = 1
         # todo automate eps storage in saved info
         # todo eps_decay needs to be reward based with waviness
@@ -145,14 +145,18 @@ class DQNAgent:
             if np.random.rand() < self.eps:
                 # Random action
                 action = np.random.randint(low=0, high=self.actions)
+            else:
+                # Policy action
+                q = self.predict('online', np.expand_dims(state, 0), np.expand_dims(game_state, 0))
+                action = np.argmax(q)
         if eps_method in ['cosine', 'arctansin']:
-            if np.random.rand() < self.eps:
+            if np.random.rand() < self.eps_now:
                 # Random action
                 action = np.random.randint(low=0, high=self.actions)
-        else:
-            # Policy action
-            q = self.predict('online', np.expand_dims(state, 0), np.expand_dims(game_state, 0))
-            action = np.argmax(q)
+            else:
+                # Policy action
+                q = self.predict('online', np.expand_dims(state, 0), np.expand_dims(game_state, 0))
+                action = np.argmax(q)
         # Decrease eps
         if eps_method == 'exp_decay':
             self.eps *= self.eps_decay
@@ -162,8 +166,9 @@ class DQNAgent:
             self.eps_now = self.eps * 0.5 * (1 + math.cos(2 * math.pi * self.step / eps_cos_frames))
         if eps_method == 'arctansin':
             # Decrease eps_now
+            # todo fix equation, values are way off
             self.eps_now = self.eps * (self.arctansin_yint + 2 * self.arctansin_amp / math.pi * (
-                math.atan(math.sin(2 * math.pi * self.arctansin_freq) / self.arctansin_delta)))
+                math.atan(math.sin(2 * math.pi *self.step* self.arctansin_freq) / self.arctansin_delta)))
         # Increment step
         self.step += 1
         return action

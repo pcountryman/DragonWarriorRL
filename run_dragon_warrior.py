@@ -15,8 +15,8 @@ from utilities import current_game_state, Actor
 
 # parameters for arctansin eps function that spends more time at boundary limits
 # and thus spends more time in chaos (high eps) or order (low eps)
-arctansin_yint = 0.4  # adjusts y intercept
-arctansin_amp = 0.4  # adjusts amplitude
+arctansin_yint = 0.45  # adjusts y intercept
+arctansin_amp = 0.48  # adjusts amplitude
 arctansin_freq = 0.0001  # completes one cycle every 1/c steps, roughly half at high eps and half at low eps
 arctansin_delta = 0.1  # adjusts function sharpness, how quickly between 0 and 1
 
@@ -24,10 +24,10 @@ episodes = 2
 frames_per_episode = 20000
 loadcheckpoint = True
 # loadcheckpoint = False
-renderflag = False
-# renderflag = True
-# print_stats_per_action = True
-print_stats_per_action = False
+# renderflag = False
+renderflag = True
+print_stats_per_action = True
+# print_stats_per_action = False
 pause_after_action = False
 # pause_after_action = True
 # printtiming = True

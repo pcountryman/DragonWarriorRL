@@ -186,10 +186,10 @@ class ButtonRemapper(Wrapper):
             if self.renderflag:
                 self.render()
 
-        if trailingnoons is None:
-            trailingnoons = dict_trailingnoons[button]
-
-        for index in range(trailingnoons):
-            self.env.frame_advance(self._button_map['NOOP'])
-            if self.renderflag:
-                self.env.render()
+        # if trailingnoons is None:
+        #     trailingnoons = dict_trailingnoons[button]
+        #
+        # for index in range(trailingnoons):
+        #     self.env.frame_advance(self._button_map['NOOP'])
+        #     if self.renderflag:
+        #         self.env.render()
