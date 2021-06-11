@@ -118,7 +118,7 @@ class ButtonRemapper(Wrapper):
                 self.pressbutton(actionname)
 
             # this will update multiple times, but we will only return the last value.
-            next_state, reward, done, info = self.env.step(
+            next_state, reward, done, info = self.env.step(  # this is calling step build in nes-py
                 self._action_map[self.dict_takesactionnamereturnsbuttonindex[actionname]])
             self.env.frame_advance(0)
             reward_for_combo_action += reward

@@ -626,7 +626,6 @@ class DragonWarriorEnv(NESEnv):
     def _exp_reward(self):
         # return the reward based on party experience gained
         _reward = (self._current_exp() - self._hero_exp)
-        self._hero_exp = self._current_exp()
         return _reward
 
     def _gold_reward(self):
@@ -635,7 +634,6 @@ class DragonWarriorEnv(NESEnv):
             if self._current_map_id() == 5:
                 self._pick_up_throne_room_gold_lose_on_reset = True  # only triggers the first time gold is picked up
         _reward = (self._current_gold() - self._hero_gold) / (self._hero_gold + 0.0001) * 100
-        self._hero_gold = self._current_gold()
         return _reward
 
     def _hp_increase_reward(self):
@@ -645,7 +643,6 @@ class DragonWarriorEnv(NESEnv):
             _reward += self._current_hp() - self._hero_hp
         else:
             pass
-        self._hero_hp = self._current_hp()
         return _reward
 
     def _herb_reward(self):
@@ -665,7 +662,6 @@ class DragonWarriorEnv(NESEnv):
         # no change is neutral
         else:
             pass
-        self._hero_herb_count = self._current_magic_herbs()
         return _reward
 
     # todo refine this for dungeon use
@@ -677,7 +673,6 @@ class DragonWarriorEnv(NESEnv):
             self._pick_up_throne_room_torch_lose_on_reset = True  # only matters for each new game
         else:
             pass
-        self._hero_torch_count = self._current_torches()
         return _reward
 
     def _gain_magic_key_reward(self):
@@ -688,8 +683,6 @@ class DragonWarriorEnv(NESEnv):
             self._pick_up_throne_room_key_lose_on_reset = True  # only matters for each new game
         else:
             pass
-        # Update key value
-        self._hero_magic_keys = self._current_magic_keys()
         return _reward
 
     def _gain_fairy_flute_reward(self):
@@ -824,19 +817,29 @@ class DragonWarriorEnv(NESEnv):
                 if self.is_command_window_open():  # combo actions press A, which is better than directions
                     _reward += -1e-4
                 else:
-                    _reward += -1e-4
+                    _reward += -2e-4
             # small penalty for standing still with no action
             else:
                 if self.is_command_window_open():
                     _reward += -1e-4
                 else:
-                    _reward += -1e-4
+                    _reward += -2e-4
         else:
-            pass
+            _reward += -1e-4
+        return _reward
+
+    def _update_hero_with_current_values(self):
+        """Update all hero values with current values"""
         self._hero_x_pos = self._current_map_x_pos()
         self._hero_y_pos = self._current_map_y_pos()
         self._hero_map_id = self._current_map_id()
-        return _reward
+        self._hero_magic_keys = self._current_magic_keys()
+        self._hero_torch_count = self._current_torches()
+        self._hero_herb_count = self._current_magic_herbs()
+        self._hero_hp = self._current_hp()
+        self._hero_gold = self._current_gold()
+        self._hero_exp = self._current_exp()
+
 
     # todo aggregate all current -> hero updates into a single function, run after reward function
     def _get_reward(self):
@@ -848,12 +851,14 @@ class DragonWarriorEnv(NESEnv):
         #         self._exit_throne_room_reward() , self._move_to_fairy_flute_reward() ,
         #         self._gain_fairy_flute_reward() , self._save_reward() ,
         #         self._stationary_penalty , self._death_penalty())
-        return (self._exp_reward() + self._open_throne_door_reward() +
+        total_reward = (self._exp_reward() + self._open_throne_door_reward() + self._gain_magic_key_reward() +
                 self._herb_reward() + self._gold_reward() +
                 self._torch_reward() + self._hp_increase_reward() + self._move_to_throne_room_key_reward() +
                 self._exit_throne_room_reward() + self._move_to_fairy_flute_reward() +
                 self._gain_fairy_flute_reward() + self._save_reward() +
-                self._stationary_penalty + self._gain_magic_key_reward() + self._death_penalty())
+                self._stationary_penalty + self._death_penalty())
+        self._update_hero_with_current_values()
+        return total_reward
 
     def _get_done(self):
         """Return True if the episode is over, False otherwise"""
