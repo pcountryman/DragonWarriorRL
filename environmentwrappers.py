@@ -2,7 +2,6 @@ import gym
 from gym import Env
 from gym import Wrapper
 
-
 class ButtonRemapper(Wrapper):
     """An environment wrapper to convert binary to discrete action space."""
 
@@ -65,14 +64,14 @@ class ButtonRemapper(Wrapper):
             self._action_meanings[action] = ' '.join(button_list)
 
         self.dict_combobuttonpresses = {'left': ['left'], 'right': ['right'], 'up': ['up'], 'down': ['down'],
-                                        'menucol0row0': ['A', 'A', 'A'],
-                                        'menucol0row1': ['A', 'down', 'A', 'A'],
-                                        'menucol0row2': ['A', 'down', 'down', 'A', 'A'],
-                                        'menucol0row3': ['A', 'down', 'down', 'down', 'A', 'A'],
-                                        'menucol1row0': ['A', 'right', 'A', 'A'],
-                                        'menucol1row1': ['A', 'right', 'down', 'A', 'A'],
-                                        'menucol1row2': ['A', 'right', 'down', 'down', 'A', 'A'],
-                                        'menucol1row3': ['A', 'right', 'down', 'down', 'down', 'A', 'A'],
+                                        'menucol0row0': ['A', 'B', 'B'],
+                                        'menucol0row1': ['A', 'down', 'A', 'B'],
+                                        'menucol0row2': ['A', 'down', 'down', 'A', 'B'],
+                                        'menucol0row3': ['A', 'down', 'down', 'down', 'A', 'B'],
+                                        'menucol1row0': ['A', 'right', 'A', 'B'],
+                                        'menucol1row1': ['A', 'right', 'down', 'A', 'B'],
+                                        'menucol1row2': ['A', 'right', 'down', 'down', 'A', 'B'],
+                                        'menucol1row3': ['A', 'right', 'down', 'down', 'down', 'A', 'B'],
                                         'A': ['A'], 'B': ['B']
                                         }
 
@@ -106,6 +105,9 @@ class ButtonRemapper(Wrapper):
         doextrapress = self.dict_combobuttonpresses[self.list_comboactions[action][0]] in [['left'], ['right'], ['up'],
                                                                                            ['down']]
 
+        # without this, some rewards obtained during combo actions executions were missed by the system
+        reward_for_combo_action = 0
+
         # Iterate through the simple button presses that the combo button presses are built from and convert them
         # into the corresponding bits that the emulator (env.step) is expecting.
         for actionname in self.dict_combobuttonpresses[self.list_comboactions[action][0]]:
@@ -118,8 +120,10 @@ class ButtonRemapper(Wrapper):
             # this will update multiple times, but we will only return the last value.
             next_state, reward, done, info = self.env.step(
                 self._action_map[self.dict_takesactionnamereturnsbuttonindex[actionname]])
+            self.env.frame_advance(0)
+            reward_for_combo_action += reward
 
-        return next_state, reward, done, info
+        return next_state, reward_for_combo_action, done, info
 
     def reset(self):
         """Reset the environment and return the initial observation."""
@@ -165,10 +169,10 @@ class ButtonRemapper(Wrapper):
         # TODO: make sure the default presses is still good when we implement frame buffering.
         if presses is None:
             # If the menu is open.
-            if self.env.command_window_state():
+            if self.env.is_command_window_open():
                 presses = 1
             else:
-                presses = 11
+                presses = 20
 
         dict_trailingnoons = {
             'NOOP': 0,

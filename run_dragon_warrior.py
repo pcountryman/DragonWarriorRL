@@ -15,19 +15,20 @@ from utilities import current_game_state, Actor
 
 # parameters for arctansin eps function that spends more time at boundary limits
 # and thus spends more time in chaos (high eps) or order (low eps)
-arctansin_yint = 0.45  # adjusts y intercept
+arctansin_yint = 0.5  # adjusts y intercept
 arctansin_amp = 0.48  # adjusts amplitude
-arctansin_freq = 0.0001  # completes one cycle every 1/c steps, roughly half at high eps and half at low eps
+arctansin_freq = 0.01  # completes one cycle every 1/c steps, roughly half at high eps and half at low eps
+# todo make arctansin_freq reward velocity dependent
 arctansin_delta = 0.1  # adjusts function sharpness, how quickly between 0 and 1
 
-episodes = 2
-frames_per_episode = 20000
+episodes = 20
+frames_per_episode = 500
 loadcheckpoint = True
 # loadcheckpoint = False
 # renderflag = False
 renderflag = True
-print_stats_per_action = True
-# print_stats_per_action = False
+# print_stats_per_action = True
+print_stats_per_action = False
 pause_after_action = False
 # pause_after_action = True
 # printtiming = True
@@ -39,7 +40,7 @@ eps_method = 'arctansin'
 # eps_method = 'cosine'
 # eps_method = 'exp_decay'
 eps_cosine_method_frames_per_cycle = 500  # travels one wavelength in this
-frames_to_elapse_before_saving_agent = 20000
+frames_to_elapse_before_saving_agent = 2000
 path_models = pathlib.Path('models/')
 filename_model = str(path_models / 'model')
 ######
@@ -82,10 +83,22 @@ epsilon_at_end = []
 key_found_in_episode = []
 gold_found_in_episode = []
 torch_found_in_episode = []
+exit_throne_room_in_episode = []
+exit_throne_room_permanent_in_episode = []
+found_fairy_flute_in_episode = []
+hero_exp_in_episode = []
+hero_gold_in_episode = []
+hero_final_map_id_in_episode = []
+hero_final_xpos_in_episode = []
+hero_final_ypos_in_episode = []
+hero_final_weapon_in_episode = []
+hero_final_armor_in_episode = []
+hero_final_shield_in_episode = []
 
 # Timing
 start = time.time()
 step = 0
+episode_frame = 0
 
 # Return values for RAM info into np array
 game_state = current_game_state(env.state_info)
@@ -165,27 +178,44 @@ for episode in range(episodes):
         torch_found_in_episode.append(1)
     if not info['throne_room_torch']:
         torch_found_in_episode.append(0)
+    if info['exit_throne_room']:
+        exit_throne_room_in_episode.append(1)
+    if not info['exit_throne_room']:
+        exit_throne_room_in_episode.append(0)
+    if info['exit_throne_room_perm']:
+        exit_throne_room_permanent_in_episode.append(1)
+    if not info['exit_throne_room_perm']:
+        exit_throne_room_permanent_in_episode.append(0)
+    if info['found_fairy_flute']:
+        found_fairy_flute_in_episode.append(1)
+    if not info['found_fairy_flute']:
+        found_fairy_flute_in_episode.append(0)
+    hero_exp_in_episode.append(info['hero_exp'])
+    hero_gold_in_episode.append(info['hero_gold'])
+    hero_final_map_id_in_episode.append(info['hero_map_id'])
+    hero_final_xpos_in_episode.append(info['hero_xpos'])
+    hero_final_ypos_in_episode.append(info['hero_ypos'])
+    hero_final_weapon_in_episode.append(info['hero_weapon'])
+    hero_final_armor_in_episode.append(info['hero_armor'])
+    hero_final_shield_in_episode.append(info['hero_shield'])
 
     # todo build lists/dictionaries with this info, export as csv
     if episode % 1 == 0:
         print('Episode {e} - +'
               'Frame {f} - +'
               'Frames/sec {fs} - +'
-              'Final epsilon {eps} - +'
               'Mean reward {r} - +'
               'Total reward {R} - +'
               'Key {k} - +'
               'Gold {g} - +'
-              'Torch {t}'.format(e=episode,
-                                 f=agent.step,
-                                 fs=np.round((agent.step - step) / (time.time() - start)),
-                                 eps=np.round(eps, 4),
-                                 r=np.round(rewards[-1:], 4),
-                                 # r=np.mean(rewards[-1:]),
-                                 R=np.round(total_reward, 4),
-                                 k=info['throne_room_key'],
-                                 g=info['throne_room_gold'],
-                                 t=info['throne_room_torch']))
+              'Escape {esc}'.format(e=episode,
+                                    f=agent.step,
+                                    fs=np.round((agent.step - step) / (time.time() - start)),
+                                    r=np.round(rewards[-1:], 4),
+                                    R=np.round(total_reward, 4),
+                                    k=info['throne_room_key'],
+                                    g=info['throne_room_gold'],
+                                    esc=info['exit_throne_room']))
         start = time.time()
         step = agent.step
 
@@ -197,7 +227,18 @@ episode_dict = {
     'key_found': key_found_in_episode,
     'gold_found': gold_found_in_episode,
     'torch_found': torch_found_in_episode,
+    'exit_throne_room': exit_throne_room_in_episode,
+    'fairy_flute_found': found_fairy_flute_in_episode,
+    'hero_exp': hero_exp_in_episode,
+    'hero_gold': hero_gold_in_episode,
+    'hero_final_map': hero_final_map_id_in_episode,
+    'hero_final_xpos': hero_final_xpos_in_episode,
+    'hero_final_ypos': hero_final_ypos_in_episode,
+    'hero_final_weapon': hero_final_weapon_in_episode,
+    'hero_final_armor': hero_final_armor_in_episode,
+    'hero_final_shield': hero_final_shield_in_episode,
 }
+
 results = pd.DataFrame(episode_dict).set_index('episode')
 
 if use_dumb_dw_env:

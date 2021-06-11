@@ -168,7 +168,7 @@ class DQNAgent:
             # Decrease eps_now
             # todo fix equation, values are way off
             self.eps_now = self.eps * (self.arctansin_yint + 2 * self.arctansin_amp / math.pi * (
-                math.atan(math.sin(2 * math.pi *self.step* self.arctansin_freq) / self.arctansin_delta)))
+                math.atan(math.sin(2 * math.pi * self.step * self.arctansin_freq) / self.arctansin_delta)))
         # Increment step
         self.step += 1
         return action
